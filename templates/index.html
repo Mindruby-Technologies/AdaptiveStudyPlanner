@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h4><i class="bi bi-grid-1x2 me-2"></i>Dashboard</h4>
+        <p>Overview of your adaptive study plan</p>
+    </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card" style="background: linear-gradient(135deg, #2d3561, #4a5298);">
+            <div class="stat-icon"><i class="bi bi-clipboard2-check"></i></div>
+            <h3 id="totalTests">—</h3>
+            <p>Total Tests</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card" style="background: linear-gradient(135deg, #0f766e, #14b8a6);">
+            <div class="stat-icon"><i class="bi bi-book"></i></div>
+            <h3 id="totalSubjects">—</h3>
+            <p>Total Subjects</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card" style="background: linear-gradient(135deg, #b45309, #f59e0b);">
+            <div class="stat-icon"><i class="bi bi-list-task"></i></div>
+            <h3 id="totalTopics">—</h3>
+            <p>Total Topics</p>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Tests -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history me-2"></i>Recent Tests</span>
+        <a href="/tests-page" class="btn btn-sm btn-primary">View All</a>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4">ID</th>
+                    <th>Name</th>
+                    <th>Exam Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="recentTestsBody">
+                <tr><td colspan="4" class="text-center py-4 text-muted">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function () {
+
+    // Load stats
+    $.get("/tests", function (tests) {
+        $("#totalTests").text(tests.length);
+        const rows = tests.slice(0, 5).map(t => `
+            <tr>
+                <td class="ps-4 text-muted">#${t.id}</td>
+                <td class="fw-semibold">${t.name}</td>
+                <td>${t.exam_date ?? "—"}</td>
+                <td><span class="badge rounded-pill badge-${t.status === 'active' ? 'active' : 'inactive'}">${t.status ?? "—"}</span></td>
+            </tr>`).join("");
+        $("#recentTestsBody").html(rows || `<tr><td colspan="4" class="text-center py-4 text-muted">No tests found</td></tr>`);
+    });
+
+    $.get("/subjects", function (data) { $("#totalSubjects").text(data.length); });
+    $.get("/topics", function (data) { $("#totalTopics").text(data.length); });
+
+});
+</script>
+{% endblock %}

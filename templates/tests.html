@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h4><i class="bi bi-clipboard2-check me-2"></i>Tests</h4>
+        <p>Manage your exam tests</p>
+    </div>
+    <button class="btn btn-primary" onclick="openModal()">
+        <i class="bi bi-plus-lg me-1"></i> Add Test
+    </button>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>All Tests</span>
+        <input type="text" id="searchInput" class="form-control form-control-sm w-auto" placeholder="Search...">
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0" id="testsTable">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4">ID</th>
+                    <th>Name</th>
+                    <th>Exam Date</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="testsBody">
+                <tr><td colspan="6" class="text-center py-4 text-muted">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add / Edit Modal -->
+<div class="modal fade" id="testModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title" id="modalTitle">Add Test</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="testId">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Test Name <span class="text-danger">*</span></label>
+                    <input type="text" id="testName" class="form-control" placeholder="e.g. Mid Term Exam">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Exam Date <span class="text-danger">*</span></label>
+                    <input type="date" id="examDate" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Status</label>
+                    <select id="testStatus" class="form-select">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary btn-sm" onclick="saveTest()">
+                    <i class="bi bi-check-lg me-1"></i> Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title">Confirm Delete</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <i class="bi bi-exclamation-triangle-fill text-warning fs-1"></i>
+                <p class="mt-2 mb-0">Are you sure you want to delete this test?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-danger btn-sm" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let deleteId = null;
+const testModal = new bootstrap.Modal(document.getElementById("testModal"));
+const deleteModal = new bootstrap.Modal(document.getElementById("deleteModal"));
+
+function loadTests() {
+    $.get("/tests", function (data) {
+        renderTable(data);
+    });
+}
+
+function renderTable(data) {
+    if (!data.length) {
+        $("#testsBody").html(`<tr><td colspan="6" class="text-center py-4 text-muted">No tests found</td></tr>`);
+        return;
+    }
+    const rows = data.map(t => `
+        <tr>
+            <td class="ps-4 text-muted">#${t.id}</td>
+            <td class="fw-semibold">${t.name}</td>
+            <td>${t.exam_date ?? "—"}</td>
+            <td><span class="badge rounded-pill badge-${t.status === 'active' ? 'active' : 'inactive'}">${t.status ?? "—"}</span></td>
+            <td class="text-muted">${t.created_at ?? "—"}</td>
+            <td>
+                <button class="btn btn-outline-primary action-btn me-1" onclick="editTest(${t.id}, '${t.name}', '${t.exam_date}', '${t.status}')">
+                    <i class="bi bi-pencil"></i> Edit
+                </button>
+                <button class="btn btn-outline-danger action-btn" onclick="deleteTest(${t.id})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>`).join("");
+    $("#testsBody").html(rows);
+}
+
+function openModal() {
+    $("#modalTitle").text("Add Test");
+    $("#testId").val("");
+    $("#testName").val("");
+    $("#examDate").val("");
+    $("#testStatus").val("active");
+    testModal.show();
+}
+
+function editTest(id, name, examDate, status) {
+    $("#modalTitle").text("Edit Test");
+    $("#testId").val(id);
+    $("#testName").val(name);
+    $("#examDate").val(examDate);
+    $("#testStatus").val(status);
+    testModal.show();
+}
+
+function saveTest() {
+    const id = $("#testId").val();
+    const payload = {
+        name: $("#testName").val().trim(),
+        exam_date: $("#examDate").val(),
+        status: $("#testStatus").val()
+    };
+
+    if (!payload.name || !payload.exam_date) {
+        showToast("Name and Exam Date are required.", "warning");
+        return;
+    }
+
+    const url = id ? `/tests/${id}` : "/tests";
+    const method = id ? "PUT" : "POST";
+
+    $.ajax({
+        url, method,
+        contentType: "application/json",
+        data: JSON.stringify(payload),
+        success: function () {
+            testModal.hide();
+            showToast(id ? "Test updated successfully!" : "Test created successfully!");
+            loadTests();
+        },
+        error: function () { showToast("Something went wrong.", "danger"); }
+    });
+}
+
+function deleteTest(id) {
+    deleteId = id;
+    deleteModal.show();
+}
+
+function confirmDelete() {
+    $.ajax({
+        url: `/tests/${deleteId}`,
+        method: "DELETE",
+        success: function () {
+            deleteModal.hide();
+            showToast("Test deleted.", "danger");
+            loadTests();
+        },
+        error: function () { showToast("Delete failed.", "danger"); }
+    });
+}
+
+// Search filter
+$("#searchInput").on("input", function () {
+    const q = $(this).val().toLowerCase();
+    $("#testsBody tr").each(function () {
+        $(this).toggle($(this).text().toLowerCase().includes(q));
+    });
+});
+
+$(document).ready(loadTests);
+</script>
+{% endblock %}
