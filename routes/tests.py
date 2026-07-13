@@ -6,17 +6,17 @@ tests_bp = Blueprint("tests", __name__)
 
 @tests_bp.route("/tests", methods=["GET"])
 def get_tests():
-    """
-    GET /tests
-    Retrieve all tests from the database.
-    Returns a list of test records.
-    """
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM tests")
     tests = cursor.fetchall()
     cursor.close()
     conn.close()
+    for t in tests:
+        if t.get("exam_date"):
+            t["exam_date"] = str(t["exam_date"])
+        if t.get("created_at"):
+            t["created_at"] = str(t["created_at"])[:10]
     return jsonify(tests)
 
 

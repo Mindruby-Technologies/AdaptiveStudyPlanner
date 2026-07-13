@@ -95,12 +95,21 @@
 
 {% block scripts %}
 <script>
+function formatDate(d) {
+    if (!d) return "—";
+    const [y, m, day] = d.split("-");
+    return `${day}-${m}-${y}`;
+}
+
 let deleteId = null;
+let testsData = {};
 const testModal = new bootstrap.Modal(document.getElementById("testModal"));
 const deleteModal = new bootstrap.Modal(document.getElementById("deleteModal"));
 
 function loadTests() {
     $.get("/tests", function (data) {
+        testsData = {};
+        data.forEach(t => testsData[t.id] = t);
         renderTable(data);
     });
 }
@@ -114,11 +123,11 @@ function renderTable(data) {
         <tr>
             <td class="ps-4 text-muted">#${t.id}</td>
             <td class="fw-semibold">${t.name}</td>
-            <td>${t.exam_date ?? "—"}</td>
+            <td>${formatDate(t.exam_date)}</td>
             <td><span class="badge rounded-pill badge-${t.status === 'active' ? 'active' : 'inactive'}">${t.status ?? "—"}</span></td>
-            <td class="text-muted">${t.created_at ?? "—"}</td>
+            <td class="text-muted">${formatDate(t.created_at)}</td>
             <td>
-                <button class="btn btn-outline-primary action-btn me-1" onclick="editTest(${t.id}, '${t.name}', '${t.exam_date}', '${t.status}')">
+                <button class="btn btn-outline-primary action-btn me-1" onclick="editTest(${t.id})">
                     <i class="bi bi-pencil"></i> Edit
                 </button>
                 <button class="btn btn-outline-danger action-btn" onclick="deleteTest(${t.id})">
@@ -138,12 +147,13 @@ function openModal() {
     testModal.show();
 }
 
-function editTest(id, name, examDate, status) {
+function editTest(id) {
+    const t = testsData[id];
     $("#modalTitle").text("Edit Test");
-    $("#testId").val(id);
-    $("#testName").val(name);
-    $("#examDate").val(examDate);
-    $("#testStatus").val(status);
+    $("#testId").val(t.id);
+    $("#testName").val(t.name);
+    $("#examDate").val(t.exam_date ? new Date(t.exam_date).toISOString().substring(0, 10) : "");
+    $("#testStatus").val(t.status);
     testModal.show();
 }
 
