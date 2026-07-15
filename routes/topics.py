@@ -16,6 +16,10 @@ def get_topics():
     topics = cursor.fetchall()
     cursor.close()
     conn.close()
+    for t in topics:
+        for field in ("start_date", "end_date", "created_at"):
+            if t.get(field):
+                t[field] = str(t[field])[:10]
     return jsonify(topics)
 
 

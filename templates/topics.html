@@ -137,7 +137,14 @@
 
 {% block scripts %}
 <script>
+function formatDate(d) {
+    if (!d) return "—";
+    const [y, m, day] = d.split("-");
+    return `${day}-${m}-${y}`;
+}
+
 let allTopics = [];
+let topicsData = {};
 let subjectsMap = {};
 let deleteId = null;
 const topicModal = new bootstrap.Modal(document.getElementById("topicModal"));
@@ -166,6 +173,8 @@ function loadSubjects() {
 function loadTopics() {
     $.get("/topics", function (data) {
         allTopics = data;
+        topicsData = {};
+        data.forEach(t => topicsData[t.id] = t);
         renderTable(data);
     });
 }
@@ -182,12 +191,12 @@ function renderTable(data) {
             <td><span class="badge bg-light text-dark border">${subjectsMap[t.subject_id] ?? `Subject #${t.subject_id}`}</span></td>
             <td>${diffBadge(t.difficulty_level)}</td>
             <td>${diffBadge(t.priority_level)}</td>
-            <td>${t.start_date ?? "—"}</td>
-            <td>${t.end_date ?? "—"}</td>
+            <td>${formatDate(t.start_date)}</td>
+            <td>${formatDate(t.end_date)}</td>
             <td><span class="badge bg-secondary">${t.miss_penalty ?? 0}</span></td>
             <td><span class="badge rounded-pill badge-${t.status === 'active' ? 'active' : 'inactive'}">${t.status ?? "—"}</span></td>
             <td>
-                <button class="btn btn-outline-primary action-btn me-1" onclick="editTopic(${t.id}, ${t.subject_id}, '${t.name}', ${t.difficulty_level}, ${t.priority_level}, '${t.start_date}', '${t.end_date}', ${t.miss_penalty ?? 0}, '${t.status}')">
+                <button class="btn btn-outline-primary action-btn me-1" onclick="editTopic(${t.id})">
                     <i class="bi bi-pencil"></i> Edit
                 </button>
                 <button class="btn btn-outline-danger action-btn" onclick="deleteTopic(${t.id})">
@@ -206,17 +215,18 @@ function openModal() {
     topicModal.show();
 }
 
-function editTopic(id, subjectId, name, diff, priority, startDate, endDate, penalty, status) {
+function editTopic(id) {
+    const t = topicsData[id];
     $("#modalTitle").text("Edit Topic");
-    $("#topicId").val(id);
-    $("#topicSubjectId").val(subjectId);
-    $("#topicName").val(name);
-    $("#difficultyLevel").val(diff);
-    $("#priorityLevel").val(priority);
-    $("#startDate").val(startDate);
-    $("#endDate").val(endDate);
-    $("#missPenalty").val(penalty);
-    $("#topicStatus").val(status);
+    $("#topicId").val(t.id);
+    $("#topicSubjectId").val(t.subject_id);
+    $("#topicName").val(t.name);
+    $("#difficultyLevel").val(t.difficulty_level);
+    $("#priorityLevel").val(t.priority_level);
+    $("#startDate").val(t.start_date ?? "");
+    $("#endDate").val(t.end_date ?? "");
+    $("#missPenalty").val(t.miss_penalty ?? 0);
+    $("#topicStatus").val(t.status);
     topicModal.show();
 }
 

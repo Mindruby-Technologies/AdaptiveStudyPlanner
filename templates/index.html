@@ -69,7 +69,7 @@ $(document).ready(function () {
             <tr>
                 <td class="ps-4 text-muted">#${t.id}</td>
                 <td class="fw-semibold">${t.name}</td>
-                <td>${t.exam_date ?? "—"}</td>
+                <td>${t.exam_date ? t.exam_date.split("-").reverse().join("-") : "—"}</td>
                 <td><span class="badge rounded-pill badge-${t.status === 'active' ? 'active' : 'inactive'}">${t.status ?? "—"}</span></td>
             </tr>`).join("");
         $("#recentTestsBody").html(rows || `<tr><td colspan="4" class="text-center py-4 text-muted">No tests found</td></tr>`);
