@@ -2,6 +2,7 @@ from flask import Flask, render_template
 from routes.tests import tests_bp
 from routes.subjects import subjects_bp
 from routes.topics import topics_bp
+from routes.schedules import schedules_bp
 
 app = Flask(__name__)
 
@@ -9,6 +10,7 @@ app = Flask(__name__)
 app.register_blueprint(tests_bp)
 app.register_blueprint(subjects_bp)
 app.register_blueprint(topics_bp)
+app.register_blueprint(schedules_bp)
 
 # UI Routes
 @app.route("/")
@@ -26,6 +28,10 @@ def subjects_page():
 @app.route("/topics-page")
 def topics_page():
     return render_template("topics.html", active_page="topics")
+
+@app.route("/schedules-page")
+def schedules_page():
+    return render_template("schedules.html", active_page="schedules")
 
 if __name__ == "__main__":
     app.run(debug=True)

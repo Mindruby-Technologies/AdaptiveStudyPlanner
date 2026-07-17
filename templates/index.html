@@ -10,49 +10,84 @@
 
 <!-- Stat Cards -->
 <div class="row g-3 mb-4">
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="stat-card" style="background: linear-gradient(135deg, #2d3561, #4a5298);">
             <div class="stat-icon"><i class="bi bi-clipboard2-check"></i></div>
             <h3 id="totalTests">—</h3>
             <p>Total Tests</p>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="stat-card" style="background: linear-gradient(135deg, #0f766e, #14b8a6);">
             <div class="stat-icon"><i class="bi bi-book"></i></div>
             <h3 id="totalSubjects">—</h3>
             <p>Total Subjects</p>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="stat-card" style="background: linear-gradient(135deg, #b45309, #f59e0b);">
             <div class="stat-icon"><i class="bi bi-list-task"></i></div>
             <h3 id="totalTopics">—</h3>
             <p>Total Topics</p>
         </div>
     </div>
+    <div class="col-md-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #065f46, #10b981);">
+            <div class="stat-icon"><i class="bi bi-clock"></i></div>
+            <h3 id="todayHours">—</h3>
+            <p>Today's Study Hours</p>
+        </div>
+    </div>
 </div>
 
-<!-- Recent Tests -->
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-clock-history me-2"></i>Recent Tests</span>
-        <a href="/tests-page" class="btn btn-sm btn-primary">View All</a>
+<div class="row g-3">
+    <!-- Today's Schedule -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-calendar-check me-2"></i>Today's Schedule</span>
+                <a href="/schedules-page" class="btn btn-sm btn-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Topic</th>
+                            <th>Hours</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="todayScheduleBody">
+                        <tr><td colspan="3" class="text-center py-4 text-muted">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th class="ps-4">ID</th>
-                    <th>Name</th>
-                    <th>Exam Date</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="recentTestsBody">
-                <tr><td colspan="4" class="text-center py-4 text-muted">Loading...</td></tr>
-            </tbody>
-        </table>
+
+    <!-- Recent Tests -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-clock-history me-2"></i>Recent Tests</span>
+                <a href="/tests-page" class="btn btn-sm btn-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">ID</th>
+                            <th>Name</th>
+                            <th>Exam Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentTestsBody">
+                        <tr><td colspan="4" class="text-center py-4 text-muted">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -60,9 +95,13 @@
 
 {% block scripts %}
 <script>
+function todayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 $(document).ready(function () {
 
-    // Load stats
     $.get("/tests", function (tests) {
         $("#totalTests").text(tests.length);
         const rows = tests.slice(0, 5).map(t => `
@@ -77,6 +116,28 @@ $(document).ready(function () {
 
     $.get("/subjects", function (data) { $("#totalSubjects").text(data.length); });
     $.get("/topics", function (data) { $("#totalTopics").text(data.length); });
+
+    $.get(`/schedules?date=${todayStr()}`, function (entries) {
+        const totalHours = entries.reduce((s, e) => s + parseFloat(e.allocated_hours), 0);
+        $("#todayHours").text(totalHours.toFixed(2) + "h");
+
+        if (!entries.length) {
+            $("#todayScheduleBody").html(`<tr><td colspan="3" class="text-center py-4 text-muted">No schedule for today</td></tr>`);
+            return;
+        }
+        const rows = entries.map(e => {
+            const missed = e.missed === 'yes';
+            const badge = missed
+                ? `<span class="badge" style="background:#fee2e2;color:#991b1b;">Missed</span>`
+                : `<span class="badge" style="background:#d1fae5;color:#065f46;">Scheduled</span>`;
+            return `<tr>
+                <td class="ps-4 fw-semibold">${e.topic_name}</td>
+                <td>${parseFloat(e.allocated_hours).toFixed(2)}h</td>
+                <td>${badge}</td>
+            </tr>`;
+        }).join("");
+        $("#todayScheduleBody").html(rows);
+    });
 
 });
 </script>

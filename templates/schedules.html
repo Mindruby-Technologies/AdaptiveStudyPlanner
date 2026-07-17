@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h4><i class="bi bi-calendar2-week me-2"></i>Schedules</h4>
+        <p>View and manage your daily study schedule</p>
+    </div>
+    <button class="btn btn-primary" onclick="generateSchedule()">
+        <i class="bi bi-arrow-clockwise me-1"></i> Generate Schedule
+    </button>
+</div>
+
+<!-- Date Tabs + Picker -->
+<div class="card mb-4">
+    <div class="card-body py-2 px-3 d-flex align-items-center gap-3 flex-wrap">
+        <div class="btn-group" role="group">
+            <button class="btn btn-sm btn-outline-primary active" id="tabToday" onclick="switchTab('today')">Today</button>
+            <button class="btn btn-sm btn-outline-primary" id="tabTomorrow" onclick="switchTab('tomorrow')">Tomorrow</button>
+            <button class="btn btn-sm btn-outline-primary" id="tabWeek" onclick="switchTab('week')">This Week</button>
+        </div>
+        <div class="d-flex align-items-center gap-2 ms-auto">
+            <label class="fw-semibold mb-0" style="font-size:0.88rem;">Jump to date:</label>
+            <input type="date" id="datePicker" class="form-control form-control-sm w-auto" onchange="switchTab('custom')">
+        </div>
+    </div>
+</div>
+
+<!-- Schedule Content -->
+<div id="scheduleContent">
+    <div class="text-center py-5 text-muted">Loading...</div>
+</div>
+
+<!-- Missed Confirm Modal -->
+<div class="modal fade" id="missedModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-1"></i> Mark as Missed</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p class="mb-1">Are you sure you want to mark <strong id="missedTopicName"></strong> as missed?</p>
+                <small class="text-muted">This will apply the miss penalty and regenerate future schedules.</small>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-danger btn-sm" onclick="confirmMissed()">Yes, Mark Missed</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function todayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function addDays(dateStr, n) {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function isMissable(dateStr) {
+    const t = todayStr();
+    const weekAgo = addDays(t, -7);
+    return dateStr <= t && dateStr >= weekAgo;
+}
+
+function labelForDate(dateStr) {
+    const t = todayStr();
+    if (dateStr === t) return "Today";
+    if (dateStr === addDays(t, 1)) return "Tomorrow";
+    return dateStr;
+}
+
+function hoursBar(hours) {
+    const pct = Math.min((hours / 4) * 100, 100);
+    const color = hours >= 2 ? "#ef4444" : hours >= 1 ? "#f59e0b" : "#22c55e";
+    return `<div class="progress mt-1" style="height:5px;">
+        <div class="progress-bar" style="width:${pct}%;background:${color};"></div>
+    </div>`;
+}
+
+function renderDayCard(dateStr, entries) {
+    const label = labelForDate(dateStr);
+    const canMiss = isMissable(dateStr);
+    const totalHours = entries.reduce((s, e) => s + parseFloat(e.allocated_hours), 0);
+
+    const rows = entries.length ? entries.map(e => {
+        const missed = e.missed === 'yes';
+        const toggleBtn = canMiss && !missed
+            ? `<button class="btn btn-sm btn-outline-danger action-btn" onclick="askMissed(${e.id}, '${e.topic_name.replace(/'/g,"\\'")}')">
+                <i class="bi bi-x-circle me-1"></i>Miss
+               </button>`
+            : missed
+                ? `<span class="badge" style="background:#fee2e2;color:#991b1b;"><i class="bi bi-x-circle-fill me-1"></i>Missed</span>`
+                : ``;
+        return `<tr>
+            <td class="ps-4 fw-semibold">${e.topic_name}</td>
+            <td>
+                <span class="fw-semibold">${parseFloat(e.allocated_hours).toFixed(2)}h</span>
+                ${hoursBar(e.allocated_hours)}
+            </td>
+            <td>${toggleBtn}</td>
+        </tr>`;
+    }).join("") : `<tr><td colspan="3" class="text-center py-3 text-muted">No schedule for this day</td></tr>`;
+
+    return `<div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-calendar-day me-2"></i>${label} <small class="text-muted fw-normal ms-1">${dateStr}</small></span>
+            <span class="badge bg-primary">${totalHours.toFixed(2)}h / 4h</span>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Topic</th>
+                        <th>Allocated Hours</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    </div>`;
+}
+
+async function fetchAndRender(dates) {
+    $("#scheduleContent").html(`<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Loading...</div>`);
+    const results = await Promise.all(dates.map(d =>
+        $.get(`/schedules?date=${d}`).then(entries => ({ date: d, entries }))
+    ));
+    const html = results.map(r => renderDayCard(r.date, r.entries)).join("");
+    $("#scheduleContent").html(html || `<div class="text-center py-5 text-muted">No schedule found</div>`);
+}
+
+function switchTab(tab) {
+    ["tabToday", "tabTomorrow", "tabWeek"].forEach(id => $(`#${id}`).removeClass("active"));
+    if (tab === "today") {
+        $("#tabToday").addClass("active");
+        fetchAndRender([todayStr()]);
+    } else if (tab === "tomorrow") {
+        $("#tabTomorrow").addClass("active");
+        fetchAndRender([addDays(todayStr(), 1)]);
+    } else if (tab === "week") {
+        $("#tabWeek").addClass("active");
+        const dates = Array.from({ length: 7 }, (_, i) => addDays(todayStr(), i));
+        fetchAndRender(dates);
+    } else if (tab === "custom") {
+        const val = $("#datePicker").val();
+        if (val) fetchAndRender([val]);
+    }
+}
+
+let pendingMissedId = null;
+const missedModal = new bootstrap.Modal(document.getElementById("missedModal"));
+
+function askMissed(id, name) {
+    pendingMissedId = id;
+    $("#missedTopicName").text(name);
+    missedModal.show();
+}
+
+function confirmMissed() {
+    missedModal.hide();
+    $.ajax({
+        url: `/schedules/${pendingMissedId}/missed`,
+        method: "PATCH",
+        success: function () {
+            showToast("Marked as missed. Schedule regenerated!", "success");
+            switchTab(currentTab());
+        },
+        error: function (xhr) {
+            showToast(xhr.responseJSON?.error || "Something went wrong.", "danger");
+        }
+    });
+}
+
+function currentTab() {
+    if ($("#tabToday").hasClass("active")) return "today";
+    if ($("#tabTomorrow").hasClass("active")) return "tomorrow";
+    if ($("#tabWeek").hasClass("active")) return "week";
+    return "custom";
+}
+
+function generateSchedule() {
+    $.ajax({
+        url: "/schedules/generate",
+        method: "POST",
+        success: function (res) {
+            showToast(`Schedule generated! ${res.entries_created} entries created.`);
+            switchTab(currentTab());
+        },
+        error: function () { showToast("Failed to generate schedule.", "danger"); }
+    });
+}
+
+$(document).ready(function () {
+    $("#datePicker").val(todayStr());
+    switchTab("today");
+});
+</script>
+{% endblock %}
