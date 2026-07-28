@@ -38,6 +38,18 @@
     </div>
 </div>
 
+<!-- Insights Panel -->
+<div class="row g-3 mt-1" id="insightsSection" style="display:none !important">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-lightbulb me-2"></i>Performance Insights</div>
+            <div class="card-body">
+                <div class="row g-3" id="insightsCards"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Add / Edit Modal -->
 <div class="modal fade" id="mocktestModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -277,6 +289,7 @@ function saveMocktest() {
             $("#linkedTest option:not(:first)").remove();
             allTopics = [];
             loadAll();
+            loadInsights();
         },
         error: function () { showToast("Something went wrong.", "danger"); }
     });
@@ -296,6 +309,7 @@ function confirmDelete() {
             showToast("Mock test deleted.", "danger");
             $("#linkedTest option:not(:first)").remove();
             loadAll();
+            loadInsights();
         },
         error: function () { showToast("Delete failed.", "danger"); }
     });
@@ -308,6 +322,105 @@ $("#searchInput").on("input", function () {
     });
 });
 
-$(document).ready(loadAll);
+$(document).ready(function () {
+    loadAll();
+    loadInsights();
+});
+
+function loadInsights() {
+    $.get("/mocktests/insights", function (data) {
+        const ins = data.insights;
+        if (!ins || !Object.keys(ins).length) {
+            $("#insightsSection").hide();
+            return;
+        }
+        $("#insightsSection").removeAttr("style");
+        const cards = [];
+
+        // Highest scoring
+        if (ins.highest) {
+            cards.push(insightCard(
+                "bi-trophy-fill", "#22c55e",
+                "Highest Scoring Topic",
+                `<strong>${ins.highest.topic_name}</strong> with an average of <strong>${ins.highest.avg}%</strong>`
+            ));
+        }
+
+        // Lowest scoring
+        if (ins.lowest) {
+            cards.push(insightCard(
+                "bi-arrow-down-circle-fill", "#ef4444",
+                "Lowest Scoring Topic",
+                `<strong>${ins.lowest.topic_name}</strong> with an average of <strong>${ins.lowest.avg}%</strong>`
+            ));
+        }
+
+        // Average per topic
+        if (ins.averages && ins.averages.length) {
+            const rows = ins.averages.map(a => {
+                const color = a.avg >= 75 ? "#22c55e" : a.avg >= 50 ? "#f59e0b" : "#ef4444";
+                const bar = `<div style="background:#f0f0f0;border-radius:4px;height:8px;margin-top:4px">
+                    <div style="width:${a.avg}%;background:${color};height:8px;border-radius:4px"></div></div>`;
+                return `<div class="mb-2"><div class="d-flex justify-content-between" style="font-size:0.85rem">
+                    <span>${a.topic_name}</span><span class="fw-semibold">${a.avg}%</span></div>${bar}</div>`;
+            }).join("");
+            cards.push(insightCard("bi-bar-chart-fill", "#4a5298", "Average Score per Topic", rows, true));
+        }
+
+        // Most improved
+        if (ins.most_improved) {
+            const sign = ins.most_improved.delta >= 0 ? "+" : "";
+            cards.push(insightCard(
+                "bi-graph-up-arrow", "#14b8a6",
+                "Most Improved Topic",
+                `<strong>${ins.most_improved.topic_name}</strong> improved by <strong>${sign}${ins.most_improved.delta}%</strong> from first to latest attempt`
+            ));
+        }
+
+        // Declining
+        if (ins.declining && ins.declining.length) {
+            const list = ins.declining.map(d =>
+                `<li><strong>${d.topic_name}</strong> — <span class="text-danger">${d.delta}%</span></li>`
+            ).join("");
+            cards.push(insightCard("bi-graph-down-arrow", "#f59e0b", "Declining Topics", `<ul class="mb-0 ps-3">${list}</ul>`, true));
+        }
+
+        // Focus areas
+        if (ins.focus_areas && ins.focus_areas.length) {
+            const list = ins.focus_areas.map(f =>
+                `<li><strong>${f.topic_name}</strong> — avg <span class="text-danger">${f.avg}%</span></li>`
+            ).join("");
+            cards.push(insightCard("bi-bullseye", "#dc2626", "Recommended Focus Areas", `<ul class="mb-0 ps-3">${list}</ul>`, true));
+        } else if (ins.averages && ins.averages.length) {
+            cards.push(insightCard("bi-bullseye", "#22c55e", "Recommended Focus Areas", "Great job! All topics are scoring above 60%."));
+        }
+
+        // Consistency
+        if (ins.consistency && ins.consistency.length) {
+            const list = ins.consistency.map(c => {
+                const label = c.std <= 5 ? "<span class='badge' style='background:#22c55e;color:#fff'>Consistent</span>"
+                    : c.std <= 15 ? "<span class='badge' style='background:#f59e0b;color:#fff'>Moderate</span>"
+                    : "<span class='badge' style='background:#ef4444;color:#fff'>Inconsistent</span>";
+                return `<li><strong>${c.topic_name}</strong> — avg ${c.avg}%, std ±${c.std}% ${label}</li>`;
+            }).join("");
+            cards.push(insightCard("bi-activity", "#7c3aed", "Score Consistency", `<ul class="mb-0 ps-3">${list}</ul>`, true));
+        }
+
+        $("#insightsCards").html(cards.join(""));
+    });
+}
+
+function insightCard(icon, color, title, body, wide = false) {
+    return `
+    <div class="col-md-${wide ? 6 : 4}">
+        <div class="p-3 rounded-3 h-100" style="background:#f8f9ff;border:1px solid #e8eaf0">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi ${icon}" style="color:${color};font-size:1.2rem"></i>
+                <span class="fw-semibold" style="font-size:0.88rem;color:#1a1f3c">${title}</span>
+            </div>
+            <div style="font-size:0.85rem;color:#444">${body}</div>
+        </div>
+    </div>`;
+}
 </script>
 {% endblock %}
