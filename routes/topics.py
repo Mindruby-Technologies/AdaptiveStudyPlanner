@@ -23,6 +23,21 @@ def get_topics():
     return jsonify(topics)
 
 
+@topics_bp.route("/topics/by-test/<int:test_id>", methods=["GET"])
+def get_topics_by_test(test_id):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT t.* FROM topics t
+        JOIN subjects s ON t.subject_id = s.id
+        WHERE s.test_id = %s
+    """, (test_id,))
+    topics = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return jsonify(topics)
+
+
 @topics_bp.route("/topics/<int:topic_id>", methods=["GET"])
 def get_topic(topic_id):
     """
