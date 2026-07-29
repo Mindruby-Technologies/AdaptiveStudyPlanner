@@ -17,3 +17,21 @@ CREATE TABLE IF NOT EXISTS MockTest_topics (
     FOREIGN KEY (mocktest_id) REFERENCES MockTests(id) ON DELETE CASCADE,
     FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS ai_mocktest_reports (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    test_id BIGINT NOT NULL,
+    student_name VARCHAR(255),
+    grade VARCHAR(50),
+    test_name VARCHAR(255),
+    test_date DATE,
+    total_score VARCHAR(50),
+    score_range VARCHAR(50),
+    percentile VARCHAR(50),
+    extracted_json JSON,
+    ai_report JSON,
+    file_name VARCHAR(255),
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('pending', 'processed') NOT NULL DEFAULT 'pending',
+    FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE
+);

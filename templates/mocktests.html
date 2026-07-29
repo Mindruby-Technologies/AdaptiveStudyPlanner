@@ -1,182 +1,379 @@
-{% extends "base.html" %}
-{% block content %}
+{% extends "base.html" %} {% block content %}
+
+<style>
+  .mt-tabs .nav-link {
+    color: #6c757d;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 10px 18px;
+  }
+  .mt-tabs .nav-link.active {
+    color: #2d3561;
+    border-bottom-color: #2d3561;
+    background: transparent;
+  }
+  .ai-drop {
+    border: 2px dashed #d5d8e3;
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    background: #f8f9ff;
+  }
+  .ai-summary-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .ai-summary-strip .chip {
+    background: #f0f2fb;
+    border: 1px solid #e3e6f3;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    color: #1a1f3c;
+  }
+  .ai-summary-strip .chip strong { color: #2d3561; }
+</style>
 
 <div class="page-header d-flex justify-content-between align-items-center">
-    <div>
-        <h4><i class="bi bi-graph-up me-2"></i>Study Performance Analyzer</h4>
-        <p>Track your mock test performance by topic</p>
-    </div>
-    <button class="btn btn-primary" onclick="openModal()">
-        <i class="bi bi-plus-lg me-1"></i> Add Mock Test
+  <div>
+    <h4><i class="bi bi-graph-up me-2"></i>Study Performance Analyzer</h4>
+    <p>Track your mock test performance by topic</p>
+  </div>
+  <button
+    class="btn btn-primary"
+    id="addMocktestBtn"
+    onclick="openModal()"
+  >
+    <i class="bi bi-plus-lg me-1"></i> Add Mock Test
+  </button>
+</div>
+
+<ul class="nav mt-tabs mb-3" id="mocktestTabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button
+      class="nav-link active"
+      id="manual-tab-btn"
+      data-bs-toggle="tab"
+      data-bs-target="#tab-manual"
+      type="button"
+      role="tab"
+    >
+      <i class="bi bi-pencil-square me-1"></i> Manual Entry
     </button>
-</div>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button
+      class="nav-link"
+      id="ai-tab-btn"
+      data-bs-toggle="tab"
+      data-bs-target="#tab-ai"
+      type="button"
+      role="tab"
+    >
+      <i class="bi bi-stars me-1"></i> AI Upload &amp; Analysis
+    </button>
+  </li>
+</ul>
 
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
+<div class="tab-content" id="mocktestTabsContent">
+  <!-- ==================== TAB 1: MANUAL ENTRY (unchanged) ==================== -->
+  <div class="tab-pane fade show active" id="tab-manual" role="tabpanel">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
         <span>All Mock Tests</span>
-        <input type="text" id="searchInput" class="form-control form-control-sm w-auto" placeholder="Search...">
-    </div>
-    <div class="card-body p-0">
+        <input
+          type="text"
+          id="searchInput"
+          class="form-control form-control-sm w-auto"
+          placeholder="Search..."
+        />
+      </div>
+      <div class="card-body p-0">
         <table class="table table-hover mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th class="ps-4">ID</th>
-                    <th>Name</th>
-                    <th>Linked Test</th>
-                    <th>Test Date</th>
-                    <th>Total Marks</th>
-                    <th>Obtained</th>
-                    <th>Score %</th>
-                    <th>Created At</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="mocktestsBody">
-                <tr><td colspan="9" class="text-center py-4 text-muted">Loading...</td></tr>
-            </tbody>
+          <thead class="table-light">
+            <tr>
+              <th class="ps-4">ID</th>
+              <th>Name</th>
+              <th>Linked Test</th>
+              <th>Test Date</th>
+              <th>Total Marks</th>
+              <th>Obtained</th>
+              <th>Score %</th>
+              <th>Created At</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="mocktestsBody">
+            <tr>
+              <td colspan="9" class="text-center py-4 text-muted">Loading...</td>
+            </tr>
+          </tbody>
         </table>
+      </div>
     </div>
-</div>
 
-<!-- Insights Panel -->
-<div class="row g-3 mt-1" id="insightsSection" style="display:none !important">
-    <div class="col-12">
+    <!-- Insights Panel -->
+    <div class="row g-3 mt-1" id="insightsSection" style="display: none !important">
+      <div class="col-12">
         <div class="card">
-            <div class="card-header"><i class="bi bi-lightbulb me-2"></i>Performance Insights</div>
-            <div class="card-body">
-                <div class="row g-3" id="insightsCards"></div>
-            </div>
+          <div class="card-header">
+            <i class="bi bi-lightbulb me-2"></i>Performance Insights
+          </div>
+          <div class="card-body">
+            <div class="row g-3" id="insightsCards"></div>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
+
+  <!-- ==================== TAB 2: AI UPLOAD & ANALYSIS ==================== -->
+  <div class="tab-pane fade" id="tab-ai" role="tabpanel">
+    <div class="card mb-3">
+      <div class="card-header">
+        <i class="bi bi-upload me-2"></i>Upload Test Report
+      </div>
+      <div class="card-body">
+        <div class="row g-3 align-items-end mb-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Select Test <span class="text-danger">*</span></label>
+            <select id="aiTestSelect" class="form-select">
+              <option value="">Select Test</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Test Report (PDF) <span class="text-danger">*</span></label>
+            <input type="file" id="aiFileInput" class="form-control" accept="application/pdf,.pdf" />
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-primary w-100" id="aiAnalyzeBtn" onclick="analyzeReport()">
+              <i class="bi bi-magic me-1"></i> Analyze
+            </button>
+          </div>
+        </div>
+        <div id="aiLoading" class="d-none text-center py-3">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="text-muted mt-2 mb-0">Extracting marks and generating AI report…</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Result Panel -->
+    <div class="card mb-3 d-none" id="aiResultPanel">
+      <div class="card-header">
+        <i class="bi bi-file-earmark-text me-2"></i>Analysis Result
+      </div>
+      <div class="card-body">
+        <div class="ai-summary-strip" id="aiResultSummary"></div>
+        <div class="row g-3" id="aiReportCards"></div>
+      </div>
+    </div>
+
+    <!-- AI Report History -->
+    <div class="card">
+      <div class="card-header">
+        <i class="bi bi-clock-history me-2"></i>AI Report History
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-4">ID</th>
+              <th>Student</th>
+              <th>Test</th>
+              <th>Test Date</th>
+              <th>Score</th>
+              <th>Percentile</th>
+              <th>Status</th>
+              <th>Uploaded</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="aiHistoryBody">
+            <tr>
+              <td colspan="9" class="text-center py-4 text-muted">Select a test to view history</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Add / Edit Modal -->
 <div class="modal fade" id="mocktestModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h6 class="modal-title" id="modalTitle">Add Mock Test</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="mocktestId">
-                <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Mock Test Name <span class="text-danger">*</span></label>
-                        <input type="text" id="mocktestName" class="form-control" placeholder="e.g. Mock Test 1">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-semibold">Test Date <span class="text-danger">*</span></label>
-                        <input type="date" id="testDate" class="form-control">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-semibold">Linked Test <span class="text-danger">*</span></label>
-                        <select id="linkedTest" class="form-select">
-                            <option value="">Select Test</option>
-                        </select>
-                    </div>
-                </div>
-
-                <hr>
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="fw-semibold" style="font-size:0.9rem;">Topic Scores</span>
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addTopicRow()">
-                        <i class="bi bi-plus-lg me-1"></i> Add Topic
-                    </button>
-                </div>
-                <table class="table table-sm" id="topicsTable">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Topic</th>
-                            <th>Marks Obtained</th>
-                            <th>Max Marks</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody id="topicRows"></tbody>
-                </table>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                <button class="btn btn-primary btn-sm" onclick="saveMocktest()">
-                    <i class="bi bi-check-lg me-1"></i> Save
-                </button>
-            </div>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="modalTitle">Add Mock Test</h6>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="mocktestId" />
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold"
+              >Mock Test Name <span class="text-danger">*</span></label
+            >
+            <input
+              type="text"
+              id="mocktestName"
+              class="form-control"
+              placeholder="e.g. Mock Test 1"
+            />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold"
+              >Test Date <span class="text-danger">*</span></label
+            >
+            <input type="date" id="testDate" class="form-control" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold"
+              >Linked Test <span class="text-danger">*</span></label
+            >
+            <select id="linkedTest" class="form-select">
+              <option value="">Select Test</option>
+            </select>
+          </div>
         </div>
+
+        <hr />
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="fw-semibold" style="font-size: 0.9rem"
+            >Topic Scores</span
+          >
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-primary"
+            onclick="addTopicRow()"
+          >
+            <i class="bi bi-plus-lg me-1"></i> Add Topic
+          </button>
+        </div>
+        <table class="table table-sm" id="topicsTable">
+          <thead class="table-light">
+            <tr>
+              <th>Topic</th>
+              <th>Marks Obtained</th>
+              <th>Max Marks</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="topicRows"></tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="saveMocktest()">
+          <i class="bi bi-check-lg me-1"></i> Save
+        </button>
+      </div>
     </div>
+  </div>
 </div>
 
 <!-- Delete Confirm Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h6 class="modal-title">Confirm Delete</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center">
-                <i class="bi bi-exclamation-triangle-fill text-warning fs-1"></i>
-                <p class="mt-2 mb-0">Are you sure you want to delete this mock test?</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                <button class="btn btn-danger btn-sm" onclick="confirmDelete()">Delete</button>
-            </div>
-        </div>
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Confirm Delete</h6>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body text-center">
+        <i class="bi bi-exclamation-triangle-fill text-warning fs-1"></i>
+        <p class="mt-2 mb-0">Are you sure you want to delete this mock test?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDelete()">
+          Delete
+        </button>
+      </div>
     </div>
+  </div>
 </div>
 
-{% endblock %}
-
-{% block scripts %}
+{% endblock %} {% block scripts %}
 <script>
-function formatDate(d) {
+  function formatDate(d) {
     if (!d) return "—";
     const [y, m, day] = d.split("-");
     return `${day}-${m}-${y}`;
-}
+  }
 
-let mocktestsData = {};
-let deleteId = null;
-let allTopics = [];
-const mocktestModal = new bootstrap.Modal(document.getElementById("mocktestModal"));
-const deleteModal = new bootstrap.Modal(document.getElementById("deleteModal"));
+  let mocktestsData = {};
+  let deleteId = null;
+  let allTopics = [];
+  const mocktestModal = new bootstrap.Modal(
+    document.getElementById("mocktestModal"),
+  );
+  const deleteModal = new bootstrap.Modal(
+    document.getElementById("deleteModal"),
+  );
 
-function loadAll() {
-    $.when(
-        $.get("/tests"),
-        $.get("/mocktests")
-    ).done(function (testsRes, mocktestsRes) {
+  function loadAll() {
+    $.when($.get("/tests"), $.get("/mocktests")).done(
+      function (testsRes, mocktestsRes) {
         const tests = testsRes[0];
 
-        const testOpts = tests.map(t => `<option value="${t.id}">${t.name}</option>`).join("");
+        const testOpts = tests
+          .map((t) => `<option value="${t.id}">${t.name}</option>`)
+          .join("");
         $("#linkedTest").append(testOpts);
+        $("#aiTestSelect").append(testOpts);
 
         mocktestsData = {};
-        mocktestsRes[0].forEach(m => mocktestsData[m.id] = m);
+        mocktestsRes[0].forEach((m) => (mocktestsData[m.id] = m));
         renderTable(mocktestsRes[0]);
-    });
-}
+      },
+    );
+  }
 
-function loadTopicsForTest(test_id, callback) {
-    if (!test_id) { allTopics = []; if (callback) callback(); return; }
-    $.get(`/topics/by-test/${test_id}`, function (data) {
-        allTopics = data;
-        if (callback) callback();
-    });
-}
-
-function renderTable(data) {
-    if (!data.length) {
-        $("#mocktestsBody").html(`<tr><td colspan="9" class="text-center py-4 text-muted">No mock tests found</td></tr>`);
-        return;
+  function loadTopicsForTest(test_id, callback) {
+    if (!test_id) {
+      allTopics = [];
+      if (callback) callback();
+      return;
     }
-    const rows = data.map(m => {
-        const total = (m.total_max || 0);
-        const obtained = (m.total_obtained || 0);
+    $.get(`/topics/by-test/${test_id}`, function (data) {
+      allTopics = data;
+      if (callback) callback();
+    });
+  }
+
+  function renderTable(data) {
+    if (!data.length) {
+      $("#mocktestsBody").html(
+        `<tr><td colspan="9" class="text-center py-4 text-muted">No mock tests found</td></tr>`,
+      );
+      return;
+    }
+    const rows = data
+      .map((m) => {
+        const total = m.total_max || 0;
+        const obtained = m.total_obtained || 0;
         const pct = total > 0 ? ((obtained / total) * 100).toFixed(1) : "—";
-        const pctBadge = total > 0
-            ? `<span class="badge" style="background:${pct >= 75 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444'};color:#fff">${pct}%</span>`
+        const pctBadge =
+          total > 0
+            ? `<span class="badge" style="background:${pct >= 75 ? "#22c55e" : pct >= 50 ? "#f59e0b" : "#ef4444"};color:#fff">${pct}%</span>`
             : "—";
         return `
         <tr>
@@ -197,14 +394,18 @@ function renderTable(data) {
                 </button>
             </td>
         </tr>`;
-    }).join("");
+      })
+      .join("");
     $("#mocktestsBody").html(rows);
-}
+  }
 
-function addTopicRow(topic_id = "", marks_obtained = "", max_marks = "") {
-    const opts = allTopics.map(t =>
-        `<option value="${t.id}" ${t.id == topic_id ? "selected" : ""}>${t.name}</option>`
-    ).join("");
+  function addTopicRow(topic_id = "", marks_obtained = "", max_marks = "") {
+    const opts = allTopics
+      .map(
+        (t) =>
+          `<option value="${t.id}" ${t.id == topic_id ? "selected" : ""}>${t.name}</option>`,
+      )
+      .join("");
     const row = `
     <tr>
         <td><select class="form-select form-select-sm topic-select"><option value="">Select Topic</option>${opts}</select></td>
@@ -213,9 +414,9 @@ function addTopicRow(topic_id = "", marks_obtained = "", max_marks = "") {
         <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="$(this).closest('tr').remove()"><i class="bi bi-trash"></i></button></td>
     </tr>`;
     $("#topicRows").append(row);
-}
+  }
 
-function openModal() {
+  function openModal() {
     $("#modalTitle").text("Add Mock Test");
     $("#mocktestId").val("");
     $("#mocktestName").val("");
@@ -224,193 +425,266 @@ function openModal() {
     allTopics = [];
     $("#topicRows").empty();
     mocktestModal.show();
-}
+  }
 
-$("#linkedTest").on("change", function () {
+  $("#linkedTest").on("change", function () {
     const test_id = $(this).val();
     $("#topicRows").empty();
     loadTopicsForTest(test_id);
-});
+  });
 
-function editMocktest(id) {
+  function editMocktest(id) {
     $.get(`/mocktests/${id}`, function (m) {
-        $("#modalTitle").text("Edit Mock Test");
-        $("#mocktestId").val(m.id);
-        $("#mocktestName").val(m.name);
-        $("#testDate").val(m.test_date ?? "");
-        $("#linkedTest").val(m.test_id);
-        $("#topicRows").empty();
-        loadTopicsForTest(m.test_id, function () {
-            (m.topics || []).forEach(t => addTopicRow(t.topic_id, t.marks_obtained, t.max_marks));
-        });
-        mocktestModal.show();
+      $("#modalTitle").text("Edit Mock Test");
+      $("#mocktestId").val(m.id);
+      $("#mocktestName").val(m.name);
+      $("#testDate").val(m.test_date ?? "");
+      $("#linkedTest").val(m.test_id);
+      $("#topicRows").empty();
+      loadTopicsForTest(m.test_id, function () {
+        (m.topics || []).forEach((t) =>
+          addTopicRow(t.topic_id, t.marks_obtained, t.max_marks),
+        );
+      });
+      mocktestModal.show();
     });
-}
+  }
 
-function saveMocktest() {
+  function saveMocktest() {
     const id = $("#mocktestId").val();
     const topics = [];
     let valid = true;
 
     $("#topicRows tr").each(function () {
-        const topic_id = $(this).find(".topic-select").val();
-        const marks_obtained = parseFloat($(this).find(".marks-obtained").val()) || 0;
-        const max_marks = parseFloat($(this).find(".max-marks").val()) || 0;
-        if (!topic_id) { valid = false; return; }
-        topics.push({ topic_id: parseInt(topic_id), marks_obtained, max_marks });
+      const topic_id = $(this).find(".topic-select").val();
+      const marks_obtained =
+        parseFloat($(this).find(".marks-obtained").val()) || 0;
+      const max_marks = parseFloat($(this).find(".max-marks").val()) || 0;
+      if (!topic_id) {
+        valid = false;
+        return;
+      }
+      topics.push({ topic_id: parseInt(topic_id), marks_obtained, max_marks });
     });
 
     const payload = {
-        name: $("#mocktestName").val().trim(),
-        test_date: $("#testDate").val(),
-        test_id: parseInt($("#linkedTest").val()),
-        topics
+      name: $("#mocktestName").val().trim(),
+      test_date: $("#testDate").val(),
+      test_id: parseInt($("#linkedTest").val()),
+      topics,
     };
 
     if (!payload.name || !payload.test_date || !payload.test_id) {
-        showToast("Name, Test Date and Linked Test are required.", "warning");
-        return;
+      showToast("Name, Test Date and Linked Test are required.", "warning");
+      return;
     }
     if (!valid) {
-        showToast("Please select a topic for all rows.", "warning");
-        return;
+      showToast("Please select a topic for all rows.", "warning");
+      return;
     }
 
     const url = id ? `/mocktests/${id}` : "/mocktests";
     const method = id ? "PUT" : "POST";
 
     $.ajax({
-        url, method,
-        contentType: "application/json",
-        data: JSON.stringify(payload),
-        success: function () {
-            mocktestModal.hide();
-            showToast(id ? "Mock test updated!" : "Mock test created!");
-            $("#linkedTest option:not(:first)").remove();
-            allTopics = [];
-            loadAll();
-            loadInsights();
-        },
-        error: function () { showToast("Something went wrong.", "danger"); }
+      url,
+      method,
+      contentType: "application/json",
+      data: JSON.stringify(payload),
+      success: function () {
+        mocktestModal.hide();
+        showToast(id ? "Mock test updated!" : "Mock test created!");
+        $("#linkedTest option:not(:first)").remove();
+        allTopics = [];
+        loadAll();
+        loadInsights();
+      },
+      error: function () {
+        showToast("Something went wrong.", "danger");
+      },
     });
-}
+  }
 
-function deleteMocktest(id) {
+  function deleteMocktest(id) {
     deleteId = id;
     deleteModal.show();
-}
+  }
 
-function confirmDelete() {
+  function confirmDelete() {
     $.ajax({
-        url: `/mocktests/${deleteId}`,
-        method: "DELETE",
-        success: function () {
-            deleteModal.hide();
-            showToast("Mock test deleted.", "danger");
-            $("#linkedTest option:not(:first)").remove();
-            loadAll();
-            loadInsights();
-        },
-        error: function () { showToast("Delete failed.", "danger"); }
+      url: `/mocktests/${deleteId}`,
+      method: "DELETE",
+      success: function () {
+        deleteModal.hide();
+        showToast("Mock test deleted.", "danger");
+        $("#linkedTest option:not(:first)").remove();
+        loadAll();
+        loadInsights();
+      },
+      error: function () {
+        showToast("Delete failed.", "danger");
+      },
     });
-}
+  }
 
-$("#searchInput").on("input", function () {
+  $("#searchInput").on("input", function () {
     const q = $(this).val().toLowerCase();
     $("#mocktestsBody tr").each(function () {
-        $(this).toggle($(this).text().toLowerCase().includes(q));
+      $(this).toggle($(this).text().toLowerCase().includes(q));
     });
-});
+  });
 
-$(document).ready(function () {
+  $(document).ready(function () {
     loadAll();
     loadInsights();
-});
+  });
 
-function loadInsights() {
+  function loadInsights() {
     $.get("/mocktests/insights", function (data) {
-        const ins = data.insights;
-        if (!ins || !Object.keys(ins).length) {
-            $("#insightsSection").hide();
-            return;
-        }
-        $("#insightsSection").removeAttr("style");
-        const cards = [];
+      const ins = data.insights;
+      if (!ins || !Object.keys(ins).length) {
+        $("#insightsSection").hide();
+        return;
+      }
+      $("#insightsSection").removeAttr("style");
+      const cards = [];
 
-        // Highest scoring
-        if (ins.highest) {
-            cards.push(insightCard(
-                "bi-trophy-fill", "#22c55e",
-                "Highest Scoring Topic",
-                `<strong>${ins.highest.topic_name}</strong> with an average of <strong>${ins.highest.avg}%</strong>`
-            ));
-        }
+      // Highest scoring
+      if (ins.highest) {
+        cards.push(
+          insightCard(
+            "bi-trophy-fill",
+            "#22c55e",
+            "Highest Scoring Topic",
+            `<strong>${ins.highest.topic_name}</strong> with an average of <strong>${ins.highest.avg}%</strong>`,
+          ),
+        );
+      }
 
-        // Lowest scoring
-        if (ins.lowest) {
-            cards.push(insightCard(
-                "bi-arrow-down-circle-fill", "#ef4444",
-                "Lowest Scoring Topic",
-                `<strong>${ins.lowest.topic_name}</strong> with an average of <strong>${ins.lowest.avg}%</strong>`
-            ));
-        }
+      // Lowest scoring
+      if (ins.lowest) {
+        cards.push(
+          insightCard(
+            "bi-arrow-down-circle-fill",
+            "#ef4444",
+            "Lowest Scoring Topic",
+            `<strong>${ins.lowest.topic_name}</strong> with an average of <strong>${ins.lowest.avg}%</strong>`,
+          ),
+        );
+      }
 
-        // Average per topic
-        if (ins.averages && ins.averages.length) {
-            const rows = ins.averages.map(a => {
-                const color = a.avg >= 75 ? "#22c55e" : a.avg >= 50 ? "#f59e0b" : "#ef4444";
-                const bar = `<div style="background:#f0f0f0;border-radius:4px;height:8px;margin-top:4px">
+      // Average per topic
+      if (ins.averages && ins.averages.length) {
+        const rows = ins.averages
+          .map((a) => {
+            const color =
+              a.avg >= 75 ? "#22c55e" : a.avg >= 50 ? "#f59e0b" : "#ef4444";
+            const bar = `<div style="background:#f0f0f0;border-radius:4px;height:8px;margin-top:4px">
                     <div style="width:${a.avg}%;background:${color};height:8px;border-radius:4px"></div></div>`;
-                return `<div class="mb-2"><div class="d-flex justify-content-between" style="font-size:0.85rem">
+            return `<div class="mb-2"><div class="d-flex justify-content-between" style="font-size:0.85rem">
                     <span>${a.topic_name}</span><span class="fw-semibold">${a.avg}%</span></div>${bar}</div>`;
-            }).join("");
-            cards.push(insightCard("bi-bar-chart-fill", "#4a5298", "Average Score per Topic", rows, true));
-        }
+          })
+          .join("");
+        cards.push(
+          insightCard(
+            "bi-bar-chart-fill",
+            "#4a5298",
+            "Average Score per Topic",
+            rows,
+            true,
+          ),
+        );
+      }
 
-        // Most improved
-        if (ins.most_improved) {
-            const sign = ins.most_improved.delta >= 0 ? "+" : "";
-            cards.push(insightCard(
-                "bi-graph-up-arrow", "#14b8a6",
-                "Most Improved Topic",
-                `<strong>${ins.most_improved.topic_name}</strong> improved by <strong>${sign}${ins.most_improved.delta}%</strong> from first to latest attempt`
-            ));
-        }
+      // Most improved
+      if (ins.most_improved) {
+        const sign = ins.most_improved.delta >= 0 ? "+" : "";
+        cards.push(
+          insightCard(
+            "bi-graph-up-arrow",
+            "#14b8a6",
+            "Most Improved Topic",
+            `<strong>${ins.most_improved.topic_name}</strong> improved by <strong>${sign}${ins.most_improved.delta}%</strong> from first to latest attempt`,
+          ),
+        );
+      }
 
-        // Declining
-        if (ins.declining && ins.declining.length) {
-            const list = ins.declining.map(d =>
-                `<li><strong>${d.topic_name}</strong> — <span class="text-danger">${d.delta}%</span></li>`
-            ).join("");
-            cards.push(insightCard("bi-graph-down-arrow", "#f59e0b", "Declining Topics", `<ul class="mb-0 ps-3">${list}</ul>`, true));
-        }
+      // Declining
+      if (ins.declining && ins.declining.length) {
+        const list = ins.declining
+          .map(
+            (d) =>
+              `<li><strong>${d.topic_name}</strong> — <span class="text-danger">${d.delta}%</span></li>`,
+          )
+          .join("");
+        cards.push(
+          insightCard(
+            "bi-graph-down-arrow",
+            "#f59e0b",
+            "Declining Topics",
+            `<ul class="mb-0 ps-3">${list}</ul>`,
+            true,
+          ),
+        );
+      }
 
-        // Focus areas
-        if (ins.focus_areas && ins.focus_areas.length) {
-            const list = ins.focus_areas.map(f =>
-                `<li><strong>${f.topic_name}</strong> — avg <span class="text-danger">${f.avg}%</span></li>`
-            ).join("");
-            cards.push(insightCard("bi-bullseye", "#dc2626", "Recommended Focus Areas", `<ul class="mb-0 ps-3">${list}</ul>`, true));
-        } else if (ins.averages && ins.averages.length) {
-            cards.push(insightCard("bi-bullseye", "#22c55e", "Recommended Focus Areas", "Great job! All topics are scoring above 60%."));
-        }
+      // Focus areas
+      if (ins.focus_areas && ins.focus_areas.length) {
+        const list = ins.focus_areas
+          .map(
+            (f) =>
+              `<li><strong>${f.topic_name}</strong> — avg <span class="text-danger">${f.avg}%</span></li>`,
+          )
+          .join("");
+        cards.push(
+          insightCard(
+            "bi-bullseye",
+            "#dc2626",
+            "Recommended Focus Areas",
+            `<ul class="mb-0 ps-3">${list}</ul>`,
+            true,
+          ),
+        );
+      } else if (ins.averages && ins.averages.length) {
+        cards.push(
+          insightCard(
+            "bi-bullseye",
+            "#22c55e",
+            "Recommended Focus Areas",
+            "Great job! All topics are scoring above 60%.",
+          ),
+        );
+      }
 
-        // Consistency
-        if (ins.consistency && ins.consistency.length) {
-            const list = ins.consistency.map(c => {
-                const label = c.std <= 5 ? "<span class='badge' style='background:#22c55e;color:#fff'>Consistent</span>"
-                    : c.std <= 15 ? "<span class='badge' style='background:#f59e0b;color:#fff'>Moderate</span>"
-                    : "<span class='badge' style='background:#ef4444;color:#fff'>Inconsistent</span>";
-                return `<li><strong>${c.topic_name}</strong> — avg ${c.avg}%, std ±${c.std}% ${label}</li>`;
-            }).join("");
-            cards.push(insightCard("bi-activity", "#7c3aed", "Score Consistency", `<ul class="mb-0 ps-3">${list}</ul>`, true));
-        }
+      // Consistency
+      if (ins.consistency && ins.consistency.length) {
+        const list = ins.consistency
+          .map((c) => {
+            const label =
+              c.std <= 5
+                ? "<span class='badge' style='background:#22c55e;color:#fff'>Consistent</span>"
+                : c.std <= 15
+                  ? "<span class='badge' style='background:#f59e0b;color:#fff'>Moderate</span>"
+                  : "<span class='badge' style='background:#ef4444;color:#fff'>Inconsistent</span>";
+            return `<li><strong>${c.topic_name}</strong> — avg ${c.avg}%, std ±${c.std}% ${label}</li>`;
+          })
+          .join("");
+        cards.push(
+          insightCard(
+            "bi-activity",
+            "#7c3aed",
+            "Score Consistency",
+            `<ul class="mb-0 ps-3">${list}</ul>`,
+            true,
+          ),
+        );
+      }
 
-        $("#insightsCards").html(cards.join(""));
+      $("#insightsCards").html(cards.join(""));
     });
-}
+  }
 
-function insightCard(icon, color, title, body, wide = false) {
+  function insightCard(icon, color, title, body, wide = false) {
     return `
     <div class="col-md-${wide ? 6 : 4}">
         <div class="p-3 rounded-3 h-100" style="background:#f8f9ff;border:1px solid #e8eaf0">
@@ -421,6 +695,214 @@ function insightCard(icon, color, title, body, wide = false) {
             <div style="font-size:0.85rem;color:#444">${body}</div>
         </div>
     </div>`;
-}
+  }
+
+  /* ==================== TAB 2: AI UPLOAD & ANALYSIS ==================== */
+
+  let aiReportsData = {};
+
+  $("#aiTestSelect").on("change", function () {
+    const test_id = $(this).val();
+    $("#aiResultPanel").addClass("d-none");
+    if (!test_id) {
+      $("#aiHistoryBody").html(
+        `<tr><td colspan="9" class="text-center py-4 text-muted">Select a test to view history</td></tr>`,
+      );
+      return;
+    }
+    loadAiHistory(test_id);
+  });
+
+  function loadAiHistory(test_id) {
+    $("#aiHistoryBody").html(
+      `<tr><td colspan="9" class="text-center py-4 text-muted">Loading...</td></tr>`,
+    );
+    $.get(`/mocktests/ai-reports?test_id=${test_id}`, function (rows) {
+      aiReportsData = {};
+      rows.forEach((r) => (aiReportsData[r.id] = r));
+      if (!rows.length) {
+        $("#aiHistoryBody").html(
+          `<tr><td colspan="9" class="text-center py-4 text-muted">No AI reports yet for this test</td></tr>`,
+        );
+        return;
+      }
+      const html = rows
+        .map((r) => {
+          const statusBadge =
+            r.status === "processed"
+              ? `<span class="badge" style="background:#22c55e;color:#fff">Processed</span>`
+              : `<span class="badge" style="background:#f59e0b;color:#fff">Pending</span>`;
+          return `
+        <tr>
+            <td class="ps-4 text-muted">#${r.id}</td>
+            <td class="fw-semibold">${r.student_name ?? "—"}</td>
+            <td><span class="badge bg-light text-dark border">${r.linked_test_name ?? "—"}</span></td>
+            <td>${formatDate(r.test_date)}</td>
+            <td>${r.total_score ?? "—"}</td>
+            <td>${r.percentile ?? "—"}</td>
+            <td>${statusBadge}</td>
+            <td class="text-muted">${formatDate(r.uploaded_at)}</td>
+            <td>
+                <button class="btn btn-outline-primary action-btn" onclick="viewAiReport(${r.id})">
+                    <i class="bi bi-eye"></i> View
+                </button>
+            </td>
+        </tr>`;
+        })
+        .join("");
+      $("#aiHistoryBody").html(html);
+    }).fail(function () {
+      $("#aiHistoryBody").html(
+        `<tr><td colspan="9" class="text-center py-4 text-danger">Failed to load history</td></tr>`,
+      );
+    });
+  }
+
+  function viewAiReport(id) {
+    const r = aiReportsData[id];
+    if (!r) return;
+    renderAiResult(r.extracted_json || {}, r.ai_report || {});
+    $("html, body").animate({ scrollTop: $("#aiResultPanel").offset().top - 90 }, 300);
+  }
+
+  function analyzeReport() {
+    const test_id = $("#aiTestSelect").val();
+    const fileEl = $("#aiFileInput")[0];
+    const file = fileEl.files[0];
+
+    if (!test_id) {
+      showToast("Please select a test.", "warning");
+      return;
+    }
+    if (!file) {
+      showToast("Please choose a PDF report to upload.", "warning");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("test_id", test_id);
+    formData.append("file", file);
+
+    $("#aiAnalyzeBtn").prop("disabled", true);
+    $("#aiLoading").removeClass("d-none");
+    $("#aiResultPanel").addClass("d-none");
+
+    $.ajax({
+      url: "/mocktests/ai-analyze",
+      method: "POST",
+      data: formData,
+      processData: false,
+      contentType: false,
+      success: function (res) {
+        showToast("AI analysis complete!");
+        renderAiResult(res.extracted, res.ai_report);
+        fileEl.value = "";
+        loadAiHistory(test_id);
+      },
+      error: function (xhr) {
+        const msg = xhr.responseJSON?.error || "Analysis failed. Please try again.";
+        showToast(msg, "danger");
+      },
+      complete: function () {
+        $("#aiAnalyzeBtn").prop("disabled", false);
+        $("#aiLoading").addClass("d-none");
+      },
+    });
+  }
+
+  function renderAiResult(extracted, report) {
+    extracted = extracted || {};
+    report = report || {};
+
+    const chips = [
+      ["Student", extracted.student_name],
+      ["Grade", extracted.grade],
+      ["Test", extracted.test_name],
+      ["Date", extracted.test_date],
+      ["Score", extracted.total_score],
+      ["Range", extracted.score_range],
+      ["Percentile", extracted.percentile],
+    ]
+      .filter(([, v]) => v !== undefined && v !== null && v !== "")
+      .map(([k, v]) => `<span class="chip">${k}: <strong>${v}</strong></span>`)
+      .join("");
+    $("#aiResultSummary").html(chips);
+
+    const cards = [];
+
+    if (report.overall_summary) {
+      cards.push(
+        insightCard("bi-info-circle-fill", "#2d3561", "Overall Summary", report.overall_summary, true),
+      );
+    }
+    if (report.trend_summary) {
+      cards.push(
+        insightCard("bi-graph-up-arrow", "#14b8a6", "Trend vs Previous Attempts", report.trend_summary, true),
+      );
+    }
+    if (report.strengths && report.strengths.length) {
+      cards.push(
+        insightCard(
+          "bi-hand-thumbs-up-fill",
+          "#22c55e",
+          "Strengths",
+          `<ul class="mb-0 ps-3">${report.strengths.map((s) => `<li>${s}</li>`).join("")}</ul>`,
+        ),
+      );
+    }
+    if (report.weaknesses && report.weaknesses.length) {
+      cards.push(
+        insightCard(
+          "bi-hand-thumbs-down-fill",
+          "#ef4444",
+          "Weaknesses",
+          `<ul class="mb-0 ps-3">${report.weaknesses.map((s) => `<li>${s}</li>`).join("")}</ul>`,
+        ),
+      );
+    }
+    if (report.recommendations && report.recommendations.length) {
+      cards.push(
+        insightCard(
+          "bi-lightbulb-fill",
+          "#f59e0b",
+          "Recommendations",
+          `<ul class="mb-0 ps-3">${report.recommendations.map((s) => `<li>${s}</li>`).join("")}</ul>`,
+        ),
+      );
+    }
+    if (report.focus_areas && report.focus_areas.length) {
+      cards.push(
+        insightCard(
+          "bi-bullseye",
+          "#dc2626",
+          "Focus Areas",
+          `<ul class="mb-0 ps-3">${report.focus_areas.map((s) => `<li>${s}</li>`).join("")}</ul>`,
+        ),
+      );
+    }
+    if (report.section_analysis && report.section_analysis.length) {
+      const rows = report.section_analysis
+        .map((s) => `<li><strong>${s.section}</strong> — ${s.analysis}</li>`)
+        .join("");
+      cards.push(
+        insightCard("bi-diagram-3-fill", "#4a5298", "Section Analysis", `<ul class="mb-0 ps-3">${rows}</ul>`, true),
+      );
+    }
+    if (report.topic_insights && report.topic_insights.length) {
+      const rows = report.topic_insights
+        .map((t) => {
+          const color =
+            t.status === "improving" ? "#22c55e" : t.status === "declining" ? "#ef4444" : "#6c757d";
+          return `<li><strong>${t.topic}</strong> — <span style="color:${color}">${t.status}</span>${t.note ? " — " + t.note : ""}</li>`;
+        })
+        .join("");
+      cards.push(
+        insightCard("bi-list-check", "#7c3aed", "Topic Insights", `<ul class="mb-0 ps-3">${rows}</ul>`, true),
+      );
+    }
+
+    $("#aiReportCards").html(cards.join(""));
+    $("#aiResultPanel").removeClass("d-none");
+  }
 </script>
 {% endblock %}

@@ -5,6 +5,7 @@ from routes.topics import topics_bp
 from routes.mocktests import mocktests_bp
 from routes.schedules import schedules_bp
 from routes.auth import auth_bp, login_required
+from routes.ai_mocktest import ai_mocktest_bp
 
 app = Flask(__name__)
 app.secret_key = "asp_secret_key_2025"
@@ -16,6 +17,7 @@ app.register_blueprint(subjects_bp)
 app.register_blueprint(topics_bp)
 app.register_blueprint(mocktests_bp)
 app.register_blueprint(schedules_bp)
+app.register_blueprint(ai_mocktest_bp)
 
 # UI Routes
 @app.route("/")
