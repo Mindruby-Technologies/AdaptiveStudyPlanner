@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document outlines the learning path of a developer who joined as an intern and contributed to the Adaptive Study Planner project. It covers the engineering concepts, best practices, and real decisions encountered while building and evolving this project — from the initial single-user Flask app to a multi-user, AI-powered study platform.
+This document captures my learning journey as an intern while contributing to the Adaptive Study Planner project. It highlights the engineering concepts, best practices, and real-world development experience I gained throughout the project—from understanding the initial single-user Flask application to helping build and enhance it into a scalable, multi-user, AI-powered study platform.
 
 ---
 
@@ -19,16 +19,16 @@ This document outlines the learning path of a developer who joined as an intern 
 The first task was understanding how a real Flask project is organized. Unlike tutorial projects where everything lives in a single file, this project used **Flask Blueprints** to separate concerns.
 
 ```
-app.py              ← entry point, registers blueprints
-routes/auth.py      ← authentication logic
-routes/tests.py     ← tests CRUD
-routes/subjects.py  ← subjects CRUD
-routes/topics.py    ← topics CRUD
-routes/schedules.py ← schedule generation
-routes/mocktests.py ← mock test tracking
-routes/ai_mocktest.py ← AI PDF analysis
-templates/          ← Jinja2 HTML templates
-migrations/         ← SQL schema files
+app.py                ← entry point, registers blueprints
+routes/auth.py        ← authentication logic
+routes/tests.py       ← tests CRUD
+routes/subjects.py    ← subjects CRUD
+routes/topics.py      ← topics CRUD
+routes/schedules.py   ← schedule generation
+routes/mocktests.py   ← mock test tracking and insights
+routes/ai_mocktest.py ← AI PDF analysis (added later)
+templates/            ← Jinja2 HTML templates
+migrations/           ← SQL schema files
 ```
 
 ### Key Takeaway
@@ -40,7 +40,7 @@ Each Blueprint is a self-contained module. `app.py` is kept clean — it only re
 - Snake_case for Python functions and variables
 - Blueprint names match their file names (`tests_bp`, `subjects_bp`)
 - Helper functions prefixed with `_` (e.g., `_run_generate`, `_generate_insights`) to indicate they are internal
-- No inline SQL strings longer than necessary — multi-line triple-quoted strings for readability
+- Multi-line triple-quoted strings for all SQL — no inline one-liners for complex queries
 
 ---
 
@@ -196,7 +196,7 @@ The Gemini API key was stored in `.env` and loaded with `python-dotenv`:
 
 ```python
 load_dotenv()
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 ```
 
 **4. Input Validation**
@@ -441,33 +441,168 @@ When integrating LLMs, always validate the response, handle formatting variation
 
 ---
 
-## 11. Feature Evolution — Key Decisions
+## 11. Building the LLM-Based Test Report Analyzer
 
-| Decision                                                  | What Was Done                                                | Why                                                          |
-| --------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| Single user → Multi-user                                  | Added `users` table, `user_id` FK on all tables, bcrypt auth | Scale the tool for multiple students                         |
-| `miss_penalty` as raw value → multiplied by missed count  | `miss_penalty * missed_count` in score formula               | More missed sessions = higher urgency = more hours allocated |
-| `generate_schedule` duplicated → `_run_generate(user_id)` | Extracted shared helper                                      | DRY principle, called from both endpoint and `mark_missed`   |
-| Manual mock test only → AI PDF upload                     | Added `ai_mocktest.py` with pdfplumber + Gemini              | Reduce manual data entry, enable richer analysis             |
-| Hardcoded schedule start from tomorrow → include today    | Changed `today + timedelta(days=1)` to `today`               | Users wanted today's schedule generated immediately          |
-| Boolean `missed` → `ENUM('yes','no')`                     | Schema used ENUM                                             | Self-documenting, matches MySQL convention in this schema    |
+This was the most complex feature added during the internship. It replaced the need to manually type marks from a PDF score report by letting Gemini read the PDF and extract the data automatically, then generate a personalized improvement report by comparing it against historical records.
+
+### 11.1 Why This Feature Was Added
+
+The manual mock test entry system worked well but had a friction point: students receive PDF score reports (e.g., PSAT practice reports) and had to manually re-enter every topic score into the system. This was tedious and error-prone. The goal was to upload the PDF directly and let the AI handle extraction and analysis.
+
+Importantly, the manual entry system was **not replaced** — it was kept as-is. The AI analyzer was added as a second tab on the same Performance Analyzer page, so users could choose either approach. Manual records and AI-extracted records both feed into the same historical comparison pool.
+
+### 11.2 The Two-Step AI Pipeline
+
+The feature was designed as a two-step pipeline, each step being a separate Gemini call:
+
+```
+Step 1 — Extraction
+PDF file → pdfplumber → raw text → Gemini → structured JSON
+(student_name, grade, test_name, test_date, total_score,
+ score_range, percentile, section_scores[], knowledge_areas[])
+
+Step 2 — Analysis
+extracted JSON + last 5 historical records → Gemini → AI report JSON
+(overall_summary, strengths[], weaknesses[],
+ recommendations[], trend_summary, focus_areas[],
+ section_analysis[], topic_insights[])
+```
+
+Separating extraction from analysis was a deliberate design decision — if extraction succeeds but analysis fails, the extracted data is already saved with `status = 'pending'` and the analysis can be retried without re-parsing the PDF.
+
+### 11.3 PDF Parsing with pdfplumber
+
+```python
+def _extract_from_pdf(file) -> str:
+    text = ""
+    with pdfplumber.open(file) as pdf:
+        for page in pdf.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
+    return text.strip()
+```
+
+`pdfplumber` extracts raw text from each page. The text is then passed to Gemini — the LLM handles interpretation of the layout, so no custom table parsing logic was needed.
+
+### 11.4 Designing the Extraction Prompt
+
+The extraction prompt was strict and explicit:
+
+```
+You are a score report parser. Extract the following fields from the test
+report text below and return ONLY valid JSON, no explanation.
+
+Extract:
+- student_name
+- grade
+- test_name
+- test_date (YYYY-MM-DD format)
+- total_score (integer)
+- score_range (e.g. "320-1520")
+- percentile (e.g. "66th")
+- section_scores: array of { section, score, range, percentile }
+- knowledge_areas: array of { topic, marks_obtained, max_marks, percentage }
+
+Return ONLY JSON.
+```
+
+Key lessons from prompt design:
+
+- Say "Return ONLY JSON" explicitly — without this, Gemini adds explanatory text before the JSON
+- Specify date format (`YYYY-MM-DD`) — otherwise dates come back in inconsistent formats
+- Define the exact array structure with field names — Gemini follows schemas reliably when given examples
+
+### 11.5 Combining Manual and AI History
+
+The most interesting engineering challenge was the history fetch. The last 5 records needed to come from **both** the manual `MockTests` table and the `ai_mocktest_reports` table, combined and sorted by datetime, scoped to the same `test_id` and `user_id`:
+
+```python
+# Fetch up to 5 from manual MockTests for this test + user
+# Fetch up to 5 from ai_mocktest_reports for this test + user
+# Combine both lists into one
+# Sort by record_date descending
+# Return top 5 only
+combined.sort(key=lambda x: x["record_date"], reverse=True)
+return combined[:5]
+```
+
+Manual records only have topic-level marks. AI records have topic marks, section scores, and percentile. The analysis prompt instructed Gemini to use available data and skip missing fields gracefully — this avoided needing to normalize the two data sources before sending them to the LLM.
+
+### 11.6 Scoping Reports to a Test
+
+A key UX decision was requiring the user to select a **Test** from the dropdown before uploading a PDF. This meant:
+
+- AI reports were linked to a specific `test_id` via FK
+- History comparison was test-scoped — reports for one exam only compared with previous attempts of the same exam
+- The `ai_mocktest_reports` table carried `test_id` as a FK to `tests`
+
+Without this scoping, history from different exams would be mixed together, making trend analysis meaningless.
+
+### 11.7 Storing Student Name and Grade
+
+Even though the system is per-user, the PDF reports contain `student_name` and `grade` fields. These were stored in `ai_mocktest_reports` because:
+
+- The PDF is the source of truth for who took the test and at what grade level
+- It allows the AI report to reference the student by name in its analysis
+- It preserves the original report metadata for future reference and audit
+
+### 11.8 The status Field — pending/processed
+
+The `status ENUM('pending', 'processed')` field in `ai_mocktest_reports` served as a processing state tracker:
+
+```python
+# Immediately after PDF extraction succeeds
+INSERT INTO ai_mocktest_reports (..., status) VALUES (..., 'pending')
+
+# After AI report generation succeeds
+UPDATE ai_mocktest_reports SET ai_report = %s, status = 'processed' WHERE id = %s
+```
+
+This pattern ensures:
+
+- If Gemini report generation fails after extraction, the record is preserved with `status = 'pending'`
+- The history fetch only pulls `status = 'processed'` records — incomplete records are excluded from comparisons
+- The processing state is always visible in the database for debugging
+
+### Key Takeaway
+
+Building an AI feature is not just about calling an API. It requires careful pipeline design, defensive response handling, thoughtful data modeling, and clear separation between extraction and analysis responsibilities.
 
 ---
 
-## 12. Summary of Engineering Practices Learned
+## 12. Feature Evolution — Key Decisions
 
-| Practice               | How It Appeared in This Project                             |
-| ---------------------- | ----------------------------------------------------------- |
-| Modular architecture   | Flask Blueprints, one per domain                            |
-| DRY principle          | `_run_generate()`, `_generate_insights()` as shared helpers |
-| Parameterized SQL      | Every query uses `%s` placeholders                          |
-| Data isolation         | `WHERE user_id = %s` on every query                         |
-| Password security      | bcrypt hashing via flask-bcrypt                             |
-| Environment variables  | `.env` for API keys, never in source code                   |
-| Defensive API handling | Validate Gemini response, strip markdown wrappers           |
-| Batch DB operations    | `executemany` for bulk inserts                              |
-| HTTP semantics         | 200/201/400/404 used correctly                              |
-| Frontend performance   | `$.when()` for parallel API calls                           |
-| Timezone safety        | String-based date comparison in JavaScript                  |
-| Migration strategy     | `DEFAULT 1` backfill for zero-downtime schema changes       |
-| Code review mindset    | Extract logic, avoid workarounds, close all connections     |
+| Decision                                                    | What Was Done                                                | Why                                                           |
+| ----------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------- |
+| Single user → Multi-user                                    | Added `users` table, `user_id` FK on all tables, bcrypt auth | Scale the tool for multiple students                          |
+| `miss_penalty` as raw value → multiplied by missed count    | `miss_penalty * missed_count` in score formula               | More missed sessions = higher urgency = more hours allocated  |
+| `generate_schedule` duplicated → `_run_generate(user_id)`   | Extracted shared helper                                      | DRY principle, called from both endpoint and `mark_missed`    |
+| Manual mock test entry kept + AI PDF upload added           | Added `ai_mocktest.py` as a second tab, not a replacement    | Preserve existing workflow, add AI as an optional enhancement |
+| Hardcoded schedule start from tomorrow → include today      | Changed `today + timedelta(days=1)` to `today`               | Users wanted today's schedule generated immediately           |
+| Boolean `missed` → `ENUM('yes','no')`                       | Schema used ENUM                                             | Self-documenting, matches MySQL convention in this schema     |
+| AI report history from one table → combined from two tables | `_fetch_history()` merges manual + AI records, top 5 by date | Richer comparison context regardless of how data was entered  |
+| AI report scoped globally → scoped by test_id               | User selects Test before uploading PDF                       | Prevents cross-exam history mixing, makes trends meaningful   |
+
+---
+
+## 13. Summary of Engineering Practices Learned
+
+| Practice               | How It Appeared in This Project                               |
+| ---------------------- | ------------------------------------------------------------- |
+| Modular architecture   | Flask Blueprints, one per domain                              |
+| DRY principle          | `_run_generate()`, `_generate_insights()` as shared helpers   |
+| Parameterized SQL      | Every query uses `%s` placeholders                            |
+| Data isolation         | `WHERE user_id = %s` on every query                           |
+| Password security      | bcrypt hashing via flask-bcrypt                               |
+| Environment variables  | `.env` for API keys, never in source code                     |
+| Defensive API handling | Validate Gemini response, strip markdown wrappers             |
+| Batch DB operations    | `executemany` for bulk inserts                                |
+| HTTP semantics         | 200/201/400/404 used correctly                                |
+| Frontend performance   | `$.when()` for parallel API calls                             |
+| Timezone safety        | String-based date comparison in JavaScript                    |
+| Migration strategy     | `DEFAULT 1` backfill for zero-downtime schema changes         |
+| Code review mindset    | Extract logic, avoid workarounds, close all connections       |
+| AI pipeline design     | Separate extraction from analysis, use status field for state |
+| Prompt engineering     | Explicit JSON-only instructions, typed field definitions      |
+| Mixed data sources     | Normalize at the application layer, let LLM handle gaps       |

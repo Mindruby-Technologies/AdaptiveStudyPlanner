@@ -121,21 +121,41 @@ The `miss_penalty` in the initial version was simply the raw value from the topi
 
 ---
 
-## 6. Mock Test Performance Tracking
+## 6. Mock Test Performance Tracking and Analysis
 
-The initial mock test feature was entirely manual. A user would:
+The mock test system was a core feature built from the start. It had two parts: manual data entry and automated analysis.
 
-1. Create a `MockTest` record linked to a test, with a date
-2. Add topic-wise scores (marks obtained vs max marks)
-3. View auto-generated performance insights
+### 6.1 Manual Test Report Entry
 
-The insights were calculated in pure Python (no AI) inside `_generate_insights()`:
+A user would:
+1. Create a `MockTest` record linked to a test, with a name and date
+2. Add topic-wise scores row by row (marks obtained vs max marks per topic)
+3. Save the record — the UI supported adding/removing topic rows dynamically
 
-- **Highest/Lowest** scoring topic by average percentage
-- **Most Improved** — biggest positive delta between first and last attempt
-- **Declining** — topics where last attempt was worse than first
-- **Focus Areas** — topics averaging below 60%
-- **Consistency** — standard deviation per topic across attempts
+The data was stored across two tables:
+- `MockTests` — the test header (name, date, linked test)
+- `MockTest_topics` — one row per topic with `marks_obtained` and `max_marks`
+
+This manual entry approach was intentional for the initial version — it gave full control over what data was recorded and kept the system simple without any external dependencies.
+
+### 6.2 Automated Performance Analysis
+
+Once mock test data was entered, the system automatically generated performance insights using pure Python logic inside `_generate_insights()`. No AI or external API was involved — all analysis was deterministic:
+
+- **Highest/Lowest** scoring topic by average percentage across all attempts
+- **Most Improved** — biggest positive delta between first and last attempt (minimum 2 entries required)
+- **Declining** — topics where the last attempt percentage was lower than the first
+- **Focus Areas** — topics averaging below 60%, flagged for extra attention
+- **Consistency** — standard deviation per topic across attempts (low std = consistent performance)
+
+The insights were displayed as visual cards on the Performance Analyzer page, with color-coded progress bars and badges.
+
+### 6.3 Why Manual Entry First
+
+The decision to start with manual entry rather than AI-based extraction was deliberate:
+- No external API dependency meant the feature worked immediately
+- It validated the data model and UI before investing in AI integration
+- Manual records became the historical baseline that the later AI analyzer would compare against
 
 ---
 
@@ -212,8 +232,9 @@ The initial version established the full foundation of the application:
 - A clean modular Flask architecture using Blueprints
 - A well-designed relational schema with proper foreign keys
 - A working adaptive scheduling algorithm
-- A manual mock test tracking system with automated insights
+- A manual mock test entry system with topic-wise marks recording
+- A pure Python performance analysis engine (no AI dependency)
 - A simple but functional single-user authentication system
 - A consistent Bootstrap 5 UI with AJAX-driven interactions
 
-This foundation made it straightforward to later add multi-user support, AI-powered analysis, and PDF report processing without restructuring the core architecture.
+The manual mock test system was not a placeholder — it was a fully functional feature that served as the historical data foundation for the AI-powered analyzer added in a later phase. This foundation made it straightforward to later add multi-user support, AI-powered PDF analysis, and Gemini-generated improvement reports without restructuring the core architecture.
