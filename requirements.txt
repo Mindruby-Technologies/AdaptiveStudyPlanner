@@ -1,5 +1,6 @@
 flask
 mysql-connector-python
 pdfplumber
-google-genai
+google-generativeai
 python-dotenv
+flask-bcrypt

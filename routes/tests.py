@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 from db import get_connection
 
 tests_bp = Blueprint("tests", __name__)
@@ -6,9 +6,10 @@ tests_bp = Blueprint("tests", __name__)
 
 @tests_bp.route("/tests", methods=["GET"])
 def get_tests():
+    user_id = session.get("user_id")
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM tests")
+    cursor.execute("SELECT * FROM tests WHERE user_id = %s", (user_id,))
     tests = cursor.fetchall()
     cursor.close()
     conn.close()
@@ -22,14 +23,10 @@ def get_tests():
 
 @tests_bp.route("/tests/<int:test_id>", methods=["GET"])
 def get_test(test_id):
-    """
-    GET /tests/<test_id>
-    Retrieve a single test by its ID.
-    Returns 404 if the test does not exist.
-    """
+    user_id = session.get("user_id")
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM tests WHERE id = %s", (test_id,))
+    cursor.execute("SELECT * FROM tests WHERE id = %s AND user_id = %s", (test_id, user_id))
     test = cursor.fetchone()
     cursor.close()
     conn.close()
@@ -40,18 +37,13 @@ def get_test(test_id):
 
 @tests_bp.route("/tests", methods=["POST"])
 def create_test():
-    """
-    POST /tests
-    Create a new test record.
-    Request body: { "name": str, "exam_date": "YYYY-MM-DD", "status": str }
-    Returns the new record's ID on success with 201 status.
-    """
+    user_id = session.get("user_id")
     data = request.get_json()
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO tests (name, exam_date, status) VALUES (%s, %s, %s)",
-        (data["name"], data["exam_date"], data["status"])
+        "INSERT INTO tests (name, exam_date, status, user_id) VALUES (%s, %s, %s, %s)",
+        (data["name"], data["exam_date"], data["status"], user_id)
     )
     conn.commit()
     new_id = cursor.lastrowid
@@ -62,17 +54,13 @@ def create_test():
 
 @tests_bp.route("/tests/<int:test_id>", methods=["PUT"])
 def update_test(test_id):
-    """
-    PUT /tests/<test_id>
-    Update an existing test by its ID.
-    Request body: { "name": str, "exam_date": "YYYY-MM-DD", "status": str }
-    """
+    user_id = session.get("user_id")
     data = request.get_json()
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "UPDATE tests SET name = %s, exam_date = %s, status = %s WHERE id = %s",
-        (data["name"], data["exam_date"], data["status"], test_id)
+        "UPDATE tests SET name = %s, exam_date = %s, status = %s WHERE id = %s AND user_id = %s",
+        (data["name"], data["exam_date"], data["status"], test_id, user_id)
     )
     conn.commit()
     cursor.close()
@@ -82,13 +70,10 @@ def update_test(test_id):
 
 @tests_bp.route("/tests/<int:test_id>", methods=["DELETE"])
 def delete_test(test_id):
-    """
-    DELETE /tests/<test_id>
-    Delete a test record by its ID.
-    """
+    user_id = session.get("user_id")
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM tests WHERE id = %s", (test_id,))
+    cursor.execute("DELETE FROM tests WHERE id = %s AND user_id = %s", (test_id, user_id))
     conn.commit()
     cursor.close()
     conn.close()

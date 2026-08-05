@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 from db import get_connection
 
 subjects_bp = Blueprint("subjects", __name__)
@@ -6,14 +6,10 @@ subjects_bp = Blueprint("subjects", __name__)
 
 @subjects_bp.route("/subjects", methods=["GET"])
 def get_subjects():
-    """
-    GET /subjects
-    Retrieve all subjects from the database.
-    Returns a list of subject records.
-    """
+    user_id = session.get("user_id")
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM subjects")
+    cursor.execute("SELECT * FROM subjects WHERE user_id = %s", (user_id,))
     subjects = cursor.fetchall()
     cursor.close()
     conn.close()
@@ -22,14 +18,10 @@ def get_subjects():
 
 @subjects_bp.route("/subjects/<int:subject_id>", methods=["GET"])
 def get_subject(subject_id):
-    """
-    GET /subjects/<subject_id>
-    Retrieve a single subject by its ID.
-    Returns 404 if the subject does not exist.
-    """
+    user_id = session.get("user_id")
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM subjects WHERE id = %s", (subject_id,))
+    cursor.execute("SELECT * FROM subjects WHERE id = %s AND user_id = %s", (subject_id, user_id))
     subject = cursor.fetchone()
     cursor.close()
     conn.close()
@@ -40,18 +32,13 @@ def get_subject(subject_id):
 
 @subjects_bp.route("/subjects", methods=["POST"])
 def create_subject():
-    """
-    POST /subjects
-    Create a new subject linked to a test.
-    Request body: { "test_id": int, "name": str, "status": "active"|"inactive" }
-    Returns the new record's ID on success with 201 status.
-    """
+    user_id = session.get("user_id")
     data = request.get_json()
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO subjects (test_id, name, status) VALUES (%s, %s, %s)",
-        (data["test_id"], data["name"], data["status"])
+        "INSERT INTO subjects (test_id, name, status, user_id) VALUES (%s, %s, %s, %s)",
+        (data["test_id"], data["name"], data["status"], user_id)
     )
     conn.commit()
     new_id = cursor.lastrowid
@@ -62,17 +49,13 @@ def create_subject():
 
 @subjects_bp.route("/subjects/<int:subject_id>", methods=["PUT"])
 def update_subject(subject_id):
-    """
-    PUT /subjects/<subject_id>
-    Update an existing subject by its ID.
-    Request body: { "test_id": int, "name": str, "status": "active"|"inactive" }
-    """
+    user_id = session.get("user_id")
     data = request.get_json()
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "UPDATE subjects SET test_id = %s, name = %s, status = %s WHERE id = %s",
-        (data["test_id"], data["name"], data["status"], subject_id)
+        "UPDATE subjects SET test_id = %s, name = %s, status = %s WHERE id = %s AND user_id = %s",
+        (data["test_id"], data["name"], data["status"], subject_id, user_id)
     )
     conn.commit()
     cursor.close()
@@ -82,13 +65,10 @@ def update_subject(subject_id):
 
 @subjects_bp.route("/subjects/<int:subject_id>", methods=["DELETE"])
 def delete_subject(subject_id):
-    """
-    DELETE /subjects/<subject_id>
-    Delete a subject record by its ID.
-    """
+    user_id = session.get("user_id")
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM subjects WHERE id = %s", (subject_id,))
+    cursor.execute("DELETE FROM subjects WHERE id = %s AND user_id = %s", (subject_id, user_id))
     conn.commit()
     cursor.close()
     conn.close()
