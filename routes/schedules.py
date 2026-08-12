@@ -27,8 +27,8 @@ def _run_generate(user_id):
         cursor.close()
         conn.close()
         return 0
-
-    range_start = max(range_row["range_start"], today)
+    # range_start should be start with next day
+    range_start = max(range_row["range_start"], today + timedelta(days=1))
     range_end = range_row["range_end"]
 
     if range_start > range_end:

@@ -168,9 +168,10 @@ function askMissed(id, name) {
 }
 
 function confirmMissed() {
+    const idToMiss = pendingMissedId;
     missedModal.hide();
     $.ajax({
-        url: `/schedules/${pendingMissedId}/missed`,
+        url: `/schedules/${idToMiss}/missed`,
         method: "PATCH",
         success: function () {
             showToast("Marked as missed. Schedule regenerated!", "success");
