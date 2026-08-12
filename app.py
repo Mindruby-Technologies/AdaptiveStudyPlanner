@@ -4,11 +4,12 @@ from routes.subjects import subjects_bp
 from routes.topics import topics_bp
 from routes.mocktests import mocktests_bp
 from routes.schedules import schedules_bp
-from routes.auth import auth_bp, login_required
+from routes.auth import auth_bp, login_required, bcrypt
 from routes.ai_mocktest import ai_mocktest_bp
 
 app = Flask(__name__)
 app.secret_key = "asp_secret_key_2025"
+bcrypt.init_app(app)
 
 # Register blueprints
 app.register_blueprint(auth_bp)

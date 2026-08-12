@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 from db import get_connection
 
 mocktests_bp = Blueprint("mocktests", __name__)
@@ -6,27 +6,23 @@ mocktests_bp = Blueprint("mocktests", __name__)
 
 @mocktests_bp.route("/mocktests/insights", methods=["GET"])
 def get_insights():
+    user_id = session.get("user_id")
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
-        SELECT
-            tp.id AS topic_id,
-            tp.name AS topic_name,
-            mt.id AS mocktest_id,
-            mt.name AS mocktest_name,
-            mt.test_date,
-            mtt.marks_obtained,
-            mtt.max_marks
+        SELECT tp.id AS topic_id, tp.name AS topic_name,
+               mt.id AS mocktest_id, mt.name AS mocktest_name,
+               mt.test_date, mtt.marks_obtained, mtt.max_marks
         FROM MockTest_topics mtt
         JOIN MockTests mt ON mtt.mocktest_id = mt.id
         JOIN topics tp ON mtt.topic_id = tp.id
+        WHERE mt.user_id = %s
         ORDER BY tp.id, mt.test_date ASC
-    """)
+    """, (user_id,))
     rows = cursor.fetchall()
     cursor.close()
     conn.close()
 
-    # Build score map: { topic_id: { name, entries: [{date, pct}] } }
     score_map = {}
     for r in rows:
         tid = r["topic_id"]
@@ -62,11 +58,9 @@ def _generate_insights(score_map):
         }
 
     sorted_by_avg = sorted(avg_scores.values(), key=lambda x: x["avg"])
-
     highest = sorted_by_avg[-1]
     lowest = sorted_by_avg[0]
 
-    # Most improved: biggest positive difference between last and first entry (min 2 entries)
     most_improved = None
     most_improved_delta = None
     for tid, data in score_map.items():
@@ -77,7 +71,6 @@ def _generate_insights(score_map):
                 most_improved_delta = delta
                 most_improved = {"topic_name": data["topic_name"], "delta": round(delta, 2)}
 
-    # Declining: last entry pct < first entry pct
     declining = [
         {"topic_name": data["topic_name"],
          "delta": round(data["entries"][-1]["pct"] - data["entries"][0]["pct"], 2)}
@@ -85,13 +78,11 @@ def _generate_insights(score_map):
         if len(data["entries"]) >= 2 and data["entries"][-1]["pct"] < data["entries"][0]["pct"]
     ]
 
-    # Focus areas: avg below 60%
     focus_areas = [
         {"topic_name": d["topic_name"], "avg": d["avg"]}
         for d in sorted_by_avg if d["avg"] < 60
     ]
 
-    # Consistency: std deviation per topic (low std = consistent)
     consistency = []
     for tid, data in score_map.items():
         entries = data["entries"]
@@ -114,6 +105,7 @@ def _generate_insights(score_map):
 
 @mocktests_bp.route("/mocktests", methods=["GET"])
 def get_mocktests():
+    user_id = session.get("user_id")
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
@@ -123,9 +115,10 @@ def get_mocktests():
         FROM MockTests mt
         JOIN tests t ON mt.test_id = t.id
         LEFT JOIN MockTest_topics mtt ON mtt.mocktest_id = mt.id
+        WHERE mt.user_id = %s
         GROUP BY mt.id
         ORDER BY mt.id DESC
-    """)
+    """, (user_id,))
     mocktests = cursor.fetchall()
     for m in mocktests:
         for field in ("test_date", "created_at", "modified_at"):
@@ -138,9 +131,10 @@ def get_mocktests():
 
 @mocktests_bp.route("/mocktests/<int:mocktest_id>", methods=["GET"])
 def get_mocktest(mocktest_id):
+    user_id = session.get("user_id")
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM MockTests WHERE id = %s", (mocktest_id,))
+    cursor.execute("SELECT * FROM MockTests WHERE id = %s AND user_id = %s", (mocktest_id, user_id))
     mocktest = cursor.fetchone()
     if not mocktest:
         cursor.close()
@@ -158,12 +152,13 @@ def get_mocktest(mocktest_id):
 
 @mocktests_bp.route("/mocktests", methods=["POST"])
 def create_mocktest():
+    user_id = session.get("user_id")
     data = request.get_json()
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO MockTests (name, test_date, test_id) VALUES (%s, %s, %s)",
-        (data["name"], data["test_date"], data["test_id"])
+        "INSERT INTO MockTests (name, test_date, test_id, user_id) VALUES (%s, %s, %s, %s)",
+        (data["name"], data["test_date"], data["test_id"], user_id)
     )
     mocktest_id = cursor.lastrowid
     for topic in data.get("topics", []):
@@ -179,12 +174,13 @@ def create_mocktest():
 
 @mocktests_bp.route("/mocktests/<int:mocktest_id>", methods=["PUT"])
 def update_mocktest(mocktest_id):
+    user_id = session.get("user_id")
     data = request.get_json()
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "UPDATE MockTests SET name = %s, test_date = %s, test_id = %s WHERE id = %s",
-        (data["name"], data["test_date"], data["test_id"], mocktest_id)
+        "UPDATE MockTests SET name = %s, test_date = %s, test_id = %s WHERE id = %s AND user_id = %s",
+        (data["name"], data["test_date"], data["test_id"], mocktest_id, user_id)
     )
     cursor.execute("DELETE FROM MockTest_topics WHERE mocktest_id = %s", (mocktest_id,))
     for topic in data.get("topics", []):
@@ -200,9 +196,10 @@ def update_mocktest(mocktest_id):
 
 @mocktests_bp.route("/mocktests/<int:mocktest_id>", methods=["DELETE"])
 def delete_mocktest(mocktest_id):
+    user_id = session.get("user_id")
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM MockTests WHERE id = %s", (mocktest_id,))
+    cursor.execute("DELETE FROM MockTests WHERE id = %s AND user_id = %s", (mocktest_id, user_id))
     conn.commit()
     cursor.close()
     conn.close()

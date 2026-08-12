@@ -2,7 +2,7 @@ import os
 import json
 import pdfplumber
 from google import genai
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 from db import get_connection
 from dotenv import load_dotenv
 
@@ -58,6 +58,8 @@ def _fetch_history(test_id: int) -> list:
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
+    user_id = session.get("user_id")
+
     # Last 5 from manual MockTests
     cursor.execute("""
         SELECT mt.id, mt.name AS test_name, mt.test_date AS record_date,
@@ -71,11 +73,11 @@ def _fetch_history(test_id: int) -> list:
         FROM MockTests mt
         JOIN MockTest_topics mtt ON mtt.mocktest_id = mt.id
         JOIN topics tp ON tp.id = mtt.topic_id
-        WHERE mt.test_id = %s
+        WHERE mt.test_id = %s AND mt.user_id = %s
         GROUP BY mt.id
         ORDER BY mt.test_date DESC
         LIMIT 5
-    """, (test_id,))
+    """, (test_id, user_id))
     manual = cursor.fetchall()
 
     # Last 5 from ai_mocktest_reports
@@ -83,10 +85,10 @@ def _fetch_history(test_id: int) -> list:
         SELECT id, test_name, uploaded_at AS record_date,
                'ai' AS source, extracted_json AS topics_json
         FROM ai_mocktest_reports
-        WHERE test_id = %s AND status = 'processed'
+        WHERE test_id = %s AND user_id = %s AND status = 'processed'
         ORDER BY uploaded_at DESC
         LIMIT 5
-    """, (test_id,))
+    """, (test_id, user_id))
     ai_records = cursor.fetchall()
 
     cursor.close()
@@ -176,15 +178,18 @@ def ai_analyze():
     # Gemini: extract structured data
     extracted = _gemini_extract(raw_text)
 
+    user_id = session.get("user_id")
+
     # Save as pending
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO ai_mocktest_reports
-        (test_id, student_name, grade, test_name, test_date, total_score, score_range, percentile, extracted_json, file_name, status)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending')
+        (test_id, user_id, student_name, grade, test_name, test_date, total_score, score_range, percentile, extracted_json, file_name, status)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending')
     """, (
         test_id,
+        user_id,
         extracted.get("student_name"),
         extracted.get("grade"),
         extracted.get("test_name"),
@@ -224,6 +229,7 @@ def get_ai_reports():
     test_id = request.args.get("test_id")
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
+    user_id = session.get("user_id")
     query = """
         SELECT r.id, r.student_name, r.grade, r.test_name, r.test_date,
                r.total_score, r.score_range, r.percentile,
@@ -231,10 +237,11 @@ def get_ai_reports():
                t.name AS linked_test_name
         FROM ai_mocktest_reports r
         JOIN tests t ON t.id = r.test_id
+        WHERE r.user_id = %s
     """
-    params = []
+    params = [user_id]
     if test_id:
-        query += " WHERE r.test_id = %s"
+        query += " AND r.test_id = %s"
         params.append(test_id)
     query += " ORDER BY r.uploaded_at DESC"
     cursor.execute(query, params)
