@@ -13,8 +13,8 @@ def get_insights():
         SELECT tp.id AS topic_id, tp.name AS topic_name,
                mt.id AS mocktest_id, mt.name AS mocktest_name,
                mt.test_date, mtt.marks_obtained, mtt.max_marks
-        FROM MockTest_topics mtt
-        JOIN MockTests mt ON mtt.mocktest_id = mt.id
+        FROM mocktest_topics mtt
+        JOIN mocktests mt ON mtt.mocktest_id = mt.id
         JOIN topics tp ON mtt.topic_id = tp.id
         WHERE mt.user_id = %s
         ORDER BY tp.id, mt.test_date ASC
@@ -179,7 +179,7 @@ def update_mocktest(mocktest_id):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "UPDATE MockTests SET name = %s, test_date = %s, test_id = %s WHERE id = %s AND user_id = %s",
+        "UPDATE mocktests SET name = %s, test_date = %s, test_id = %s WHERE id = %s AND user_id = %s",
         (data["name"], data["test_date"], data["test_id"], mocktest_id, user_id)
     )
     cursor.execute("DELETE FROM mocktest_topics WHERE mocktest_id = %s", (mocktest_id,))
