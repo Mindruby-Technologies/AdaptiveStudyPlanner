@@ -112,7 +112,7 @@ def get_mocktests():
         SELECT mt.*, t.name AS test_name,
                COALESCE(SUM(mtt.marks_obtained), 0) AS total_obtained,
                COALESCE(SUM(mtt.max_marks), 0) AS total_max
-        FROM mockmests mt
+        FROM mocktests mt
         JOIN tests t ON mt.test_id = t.id
         LEFT JOIN mocktest_topics mtt ON mtt.mocktest_id = mt.id
         WHERE mt.user_id = %s
