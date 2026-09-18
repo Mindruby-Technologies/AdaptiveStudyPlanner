@@ -117,7 +117,7 @@ $(document).ready(function () {
     $.get("{{url_for('subjects_page')}}", function (data) { $("#totalSubjects").text(data.length); });
     $.get("{{url_for('topics_page')}}", function (data) { $("#totalTopics").text(data.length); });
 
-    $.get(`/schedules?date=${todayStr()}`, function (entries) {
+    $.get(`{{url_for('schedules_page')}}?date=${todayStr()}`, function (entries) {
         const totalHours = entries.reduce((s, e) => s + parseFloat(e.allocated_hours), 0);
         $("#todayHours").text(totalHours.toFixed(2) + "h");
 
