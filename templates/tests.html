@@ -170,7 +170,7 @@ function saveTest() {
         return;
     }
 
-    const url = id ? `/tests/${id}` : "/tests";
+    const url = id ? `{{url_for('tests.get_tests')}}/${id}` : "{{url_for('tests.get_tests')}}";
     const method = id ? "PUT" : "POST";
 
     $.ajax({
@@ -193,7 +193,7 @@ function deleteTest(id) {
 
 function confirmDelete() {
     $.ajax({
-        url: `/tests/${deleteId}`,
+        url: `{{url_for('tests.get_tests')}}/${deleteId}`,
         method: "DELETE",
         success: function () {
             deleteModal.hide();
