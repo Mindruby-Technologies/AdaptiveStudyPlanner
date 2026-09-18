@@ -114,8 +114,8 @@ $(document).ready(function () {
         $("#recentTestsBody").html(rows || `<tr><td colspan="4" class="text-center py-4 text-muted">No tests found</td></tr>`);
     });
 
-    $.get("{{url_for('subjects_page')}}", function (data) { $("#totalSubjects").text(data.length); });
-    $.get("{{url_for('topics_page')}}", function (data) { $("#totalTopics").text(data.length); });
+    $.get("{{url_for('subjects.get_subjects')}}", function (data) { $("#totalSubjects").text(data.length); });
+    $.get("{{url_for('topics.get_topics')}}", function (data) { $("#totalTopics").text(data.length); });
 
     $.get(`{{url_for('schedules.get_schedules')}}?date=${todayStr()}`, function (entries) {
         const totalHours = entries.reduce((s, e) => s + parseFloat(e.allocated_hours), 0);
