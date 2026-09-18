@@ -112,7 +112,7 @@ const subjectModal = new bootstrap.Modal(document.getElementById("subjectModal")
 const deleteModal = new bootstrap.Modal(document.getElementById("deleteModal"));
 
 function loadTests() {
-    $.get("/tests", function (tests) {
+    $.get("{{url_for('tests.get_tests')}}", function (tests) {
         testsMap = {};
         tests.forEach(t => testsMap[t.id] = t.name);
 
@@ -127,7 +127,7 @@ function loadTests() {
 }
 
 function loadSubjects() {
-    $.get("/subjects", function (data) {
+    $.get("{{url_for('subjects.get_subjects')}}", function (data) {
         allSubjects = data;
         renderTable(data);
     });
@@ -188,7 +188,7 @@ function saveSubject() {
         return;
     }
 
-    const url = id ? `/subjects/${id}` : "/subjects";
+    const url = id ? `{{url_for('subjects.get_subjects')}}/${id}` : "{{url_for('subjects.get_subjects')}}";
     const method = id ? "PUT" : "POST";
 
     $.ajax({
@@ -211,7 +211,7 @@ function deleteSubject(id) {
 
 function confirmDelete() {
     $.ajax({
-        url: `/subjects/${deleteId}`,
+        url: `{{url_for('subjects.get_subjects')}}/${deleteId}`,
         method: "DELETE",
         success: function () {
             deleteModal.hide();
