@@ -155,27 +155,27 @@
         <div style="color:#fff;font-size:0.85rem;font-weight:600;"><i class="bi bi-person-circle me-1"></i>{{ session.get('username', '') }}</div>
     </div>
     <nav class="mt-3">
-        <a href="/" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+        <a href="{{url_for('dashboard')}}" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
             <i class="bi bi-grid-1x2"></i> Dashboard
         </a>
-        <a href="/tests-page" class="nav-link {% if active_page == 'tests' %}active{% endif %}">
+        <a href="{{url_for('tests-page')}}" class="nav-link {% if active_page == 'tests' %}active{% endif %}">
             <i class="bi bi-clipboard2-check"></i> Tests
         </a>
-        <a href="/subjects-page" class="nav-link {% if active_page == 'subjects' %}active{% endif %}">
+        <a href="{{url_for('subjects-page')}}" class="nav-link {% if active_page == 'subjects' %}active{% endif %}">
             <i class="bi bi-book"></i> Subjects
         </a>
-        <a href="/topics-page" class="nav-link {% if active_page == 'topics' %}active{% endif %}">
+        <a href="{{url_for('topics-page')}}" class="nav-link {% if active_page == 'topics' %}active{% endif %}">
             <i class="bi bi-list-task"></i> Topics
         </a>
-        <a href="/schedules-page" class="nav-link {% if active_page == 'schedules' %}active{% endif %}">
+        <a href="{{url_for('schedules-page')}}" class="nav-link {% if active_page == 'schedules' %}active{% endif %}">
             <i class="bi bi-calendar2-week"></i> Schedules
         </a>
-        <a href="/mocktests-page" class="nav-link {% if active_page == 'mocktests' %}active{% endif %}">
+        <a href="{{url_for('mocktests-page')}}" class="nav-link {% if active_page == 'mocktests' %}active{% endif %}">
             <i class="bi bi-graph-up"></i> Performance Analyzer
         </a>
     </nav>
     <div class="sidebar-footer">
-        <a href="/logout" class="nav-link">
+        <a href="{{url_for('auth.logout" class="nav-link">
             <i class="bi bi-box-arrow-left"></i> Logout
         </a>
     </div>
