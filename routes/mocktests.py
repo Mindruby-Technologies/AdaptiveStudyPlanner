@@ -134,7 +134,7 @@ def get_mocktest(mocktest_id):
     user_id = session.get("user_id")
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM MockTests WHERE id = %s AND user_id = %s", (mocktest_id, user_id))
+    cursor.execute("SELECT * FROM mocktests WHERE id = %s AND user_id = %s", (mocktest_id, user_id))
     mocktest = cursor.fetchone()
     if not mocktest:
         cursor.close()
