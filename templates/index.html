@@ -46,7 +46,7 @@
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-calendar-check me-2"></i>Today's Schedule</span>
-                <a href="/schedules-page" class="btn btn-sm btn-primary">View All</a>
+                <a href="{{url_for('schedules_page)}}" class="btn btn-sm btn-primary">View All</a>
             </div>
             <div class="card-body p-0">
                 <table class="table table-hover mb-0">
@@ -70,7 +70,7 @@
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-clock-history me-2"></i>Recent Tests</span>
-                <a href="/tests-page" class="btn btn-sm btn-primary">View All</a>
+                <a href="{{url_for('tests_page')}}" class="btn btn-sm btn-primary">View All</a>
             </div>
             <div class="card-body p-0">
                 <table class="table table-hover mb-0">
