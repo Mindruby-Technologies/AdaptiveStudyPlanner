@@ -102,7 +102,7 @@ function todayStr() {
 
 $(document).ready(function () {
 
-    $.get("/tests", function (tests) {
+    $.get("{{url_for('tests')}}", function (tests) {
         $("#totalTests").text(tests.length);
         const rows = tests.slice(0, 5).map(t => `
             <tr>
