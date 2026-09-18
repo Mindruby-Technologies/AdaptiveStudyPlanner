@@ -143,7 +143,7 @@ def get_mocktest(mocktest_id):
     for field in ("test_date", "created_at", "modified_at"):
         if mocktest.get(field):
             mocktest[field] = str(mocktest[field])[:10]
-    cursor.execute("SELECT * FROM MockTest_topics WHERE mocktest_id = %s", (mocktest_id,))
+    cursor.execute("SELECT * FROM mocktest_topics WHERE mocktest_id = %s", (mocktest_id,))
     mocktest["topics"] = cursor.fetchall()
     cursor.close()
     conn.close()
