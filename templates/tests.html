@@ -107,7 +107,7 @@ const testModal = new bootstrap.Modal(document.getElementById("testModal"));
 const deleteModal = new bootstrap.Modal(document.getElementById("deleteModal"));
 
 function loadTests() {
-    $.get("/tests", function (data) {
+    $.get("{{url_for('tests.get_tests')", function (data) {
         testsData = {};
         data.forEach(t => testsData[t.id] = t);
         renderTable(data);
