@@ -158,7 +158,7 @@ function diffBadge(level) {
 }
 
 function loadSubjects() {
-    $.get("/subjects", function (subjects) {
+    $.get("{{url_for('subjects.get_subjects')}}", function (subjects) {
         subjectsMap = {};
         subjects.forEach(s => subjectsMap[s.id] = s.name);
 
@@ -171,7 +171,7 @@ function loadSubjects() {
 }
 
 function loadTopics() {
-    $.get("/topics", function (data) {
+    $.get("{{url_for('topics.get_topics')}}", function (data) {
         allTopics = data;
         topicsData = {};
         data.forEach(t => topicsData[t.id] = t);
@@ -248,7 +248,7 @@ function saveTopic() {
         return;
     }
 
-    const url = id ? `/topics/${id}` : "/topics";
+    const url = id ? `{{url_for('topics.get_topics')}}/${id}` : "{{url_for('topics.get_topics')}}";
     const method = id ? "PUT" : "POST";
 
     $.ajax({
@@ -271,7 +271,7 @@ function deleteTopic(id) {
 
 function confirmDelete() {
     $.ajax({
-        url: `/topics/${deleteId}`,
+        url: `{{url_for('topics.get_topics')}}/${deleteId}`,
         method: "DELETE",
         success: function () {
             deleteModal.hide();
