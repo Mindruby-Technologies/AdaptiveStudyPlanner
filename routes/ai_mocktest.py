@@ -70,7 +70,7 @@ def _fetch_history(test_id: int) -> list:
                    'max_marks', mtt.max_marks,
                    'percentage', ROUND((mtt.marks_obtained / mtt.max_marks) * 100, 1)
                )) AS topics_json
-        FROM MockTests mt
+        FROM mocktests mt
         JOIN MockTest_topics mtt ON mtt.mocktest_id = mt.id
         JOIN topics tp ON tp.id = mtt.topic_id
         WHERE mt.test_id = %s AND mt.user_id = %s
