@@ -134,7 +134,7 @@ function renderDayCard(dateStr, entries) {
 async function fetchAndRender(dates) {
     $("#scheduleContent").html(`<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Loading...</div>`);
     const results = await Promise.all(dates.map(d =>
-        $.get(`/schedules?date=${d}`).then(entries => ({ date: d, entries }))
+        $.get(`{{url_for('schedules.get_schedules')}}?date=${d}`).then(entries => ({ date: d, entries }))
     ));
     const html = results.map(r => renderDayCard(r.date, r.entries)).join("");
     $("#scheduleContent").html(html || `<div class="text-center py-5 text-muted">No schedule found</div>`);
@@ -171,7 +171,7 @@ function confirmMissed() {
     const idToMiss = pendingMissedId;
     missedModal.hide();
     $.ajax({
-        url: `/schedules/${idToMiss}/missed`,
+        url: `{{url_for('schedules.mark_missed')}}/${idToMiss}/missed`,
         method: "PATCH",
         success: function () {
             showToast("Marked as missed. Schedule regenerated!", "success");
@@ -192,7 +192,7 @@ function currentTab() {
 
 function generateSchedule() {
     $.ajax({
-        url: "/schedules/generate",
+        url: "{{url_for('schedules.generate_schedule')}}/generate",
         method: "POST",
         success: function (res) {
             showToast(`Schedule generated! ${res.entries_created} entries created.`);
