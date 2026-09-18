@@ -112,9 +112,9 @@ def get_mocktests():
         SELECT mt.*, t.name AS test_name,
                COALESCE(SUM(mtt.marks_obtained), 0) AS total_obtained,
                COALESCE(SUM(mtt.max_marks), 0) AS total_max
-        FROM MockTests mt
+        FROM mockmests mt
         JOIN tests t ON mt.test_id = t.id
-        LEFT JOIN MockTest_topics mtt ON mtt.mocktest_id = mt.id
+        LEFT JOIN mocktest_topics mtt ON mtt.mocktest_id = mt.id
         WHERE mt.user_id = %s
         GROUP BY mt.id
         ORDER BY mt.id DESC
@@ -157,13 +157,13 @@ def create_mocktest():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO MockTests (name, test_date, test_id, user_id) VALUES (%s, %s, %s, %s)",
+        "INSERT INTO mocktests (name, test_date, test_id, user_id) VALUES (%s, %s, %s, %s)",
         (data["name"], data["test_date"], data["test_id"], user_id)
     )
     mocktest_id = cursor.lastrowid
     for topic in data.get("topics", []):
         cursor.execute(
-            "INSERT INTO MockTest_topics (mocktest_id, topic_id, marks_obtained, max_marks) VALUES (%s, %s, %s, %s)",
+            "INSERT INTO mocktest_topics (mocktest_id, topic_id, marks_obtained, max_marks) VALUES (%s, %s, %s, %s)",
             (mocktest_id, topic["topic_id"], topic["marks_obtained"], topic["max_marks"])
         )
     conn.commit()
@@ -182,10 +182,10 @@ def update_mocktest(mocktest_id):
         "UPDATE MockTests SET name = %s, test_date = %s, test_id = %s WHERE id = %s AND user_id = %s",
         (data["name"], data["test_date"], data["test_id"], mocktest_id, user_id)
     )
-    cursor.execute("DELETE FROM MockTest_topics WHERE mocktest_id = %s", (mocktest_id,))
+    cursor.execute("DELETE FROM mocktest_topics WHERE mocktest_id = %s", (mocktest_id,))
     for topic in data.get("topics", []):
         cursor.execute(
-            "INSERT INTO MockTest_topics (mocktest_id, topic_id, marks_obtained, max_marks) VALUES (%s, %s, %s, %s)",
+            "INSERT INTO mocktest_topics (mocktest_id, topic_id, marks_obtained, max_marks) VALUES (%s, %s, %s, %s)",
             (mocktest_id, topic["topic_id"], topic["marks_obtained"], topic["max_marks"])
         )
     conn.commit()
@@ -199,7 +199,7 @@ def delete_mocktest(mocktest_id):
     user_id = session.get("user_id")
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM MockTests WHERE id = %s AND user_id = %s", (mocktest_id, user_id))
+    cursor.execute("DELETE FROM mocktests WHERE id = %s AND user_id = %s", (mocktest_id, user_id))
     conn.commit()
     cursor.close()
     conn.close()
