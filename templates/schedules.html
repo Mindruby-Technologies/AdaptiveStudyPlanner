@@ -192,7 +192,7 @@ function currentTab() {
 
 function generateSchedule() {
     $.ajax({
-        url: "{{url_for('schedules.generate_schedule')}}/generate",
+        url: "{{url_for('schedules.generate_schedule')}}",
         method: "POST",
         success: function (res) {
             showToast(`Schedule generated! ${res.entries_created} entries created.`);
