@@ -354,14 +354,14 @@
       if (callback) callback();
       return;
     }
-  $.get(
-    "{{ url_for('topics.get_topics_by_test', test_id='TEST_ID') }}"
-        .replace("TEST_ID", test_id),
+ 
+$.get(
+    "{{ url_for('topics.get_topics_by_test', test_id=0) }}".replace("/0", `/${test_id}`),
     function (data) {
         allTopics = data;
         if (callback) callback();
     }
-    );
+);
   }
 
   function renderTable(data) {
