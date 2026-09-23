@@ -330,8 +330,7 @@
   );
 
   function loadAll() {
-    $.get("{{ url_for('tests.get_tests') }}"),
-    $.get("{{ url_for('mocktests.get_mocktests') }}").done(
+    $.when($.get("/tests"), $.get("/mocktests")).done(
       function (testsRes, mocktestsRes) {
         const tests = testsRes[0];
 
@@ -354,14 +353,10 @@
       if (callback) callback();
       return;
     }
- 
-$.get(
-    "{{ url_for('topics.get_topics_by_test', test_id=0) }}".replace("/0", `/${test_id}`),
-    function (data) {
-        allTopics = data;
-        if (callback) callback();
-    }
-);
+    $.get(`/topics/by-test/${test_id}`, function (data) {
+      allTopics = data;
+      if (callback) callback();
+    });
   }
 
   function renderTable(data) {
