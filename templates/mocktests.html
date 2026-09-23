@@ -329,24 +329,28 @@
     document.getElementById("deleteModal"),
   );
 
-  function loadAll() {
-    $.when($.get("/tests"), $.get("/mocktests")).done(
-      function (testsRes, mocktestsRes) {
-        const tests = testsRes[0];
+function loadAll() {
+    $.when(
+        $.get("{{ url_for('tests.get_tests') }}"),
+        $.get("{{ url_for('mocktests.get_mocktests') }}")
+    ).done(
+        function (testsRes, mocktestsRes) {
+            const tests = testsRes[0];
 
-        const testOpts = tests
-          .map((t) => `<option value="${t.id}">${t.name}</option>`)
-          .join("");
-        $("#linkedTest").append(testOpts);
-        $("#aiTestSelect").append(testOpts);
+            const testOpts = tests
+                .map((t) => `<option value="${t.id}">${t.name}</option>`)
+                .join("");
 
-        mocktestsData = {};
-        mocktestsRes[0].forEach((m) => (mocktestsData[m.id] = m));
-        renderTable(mocktestsRes[0]);
-      },
+            $("#linkedTest").append(testOpts);
+            $("#aiTestSelect").append(testOpts);
+
+            mocktestsData = {};
+            mocktestsRes[0].forEach((m) => (mocktestsData[m.id] = m));
+
+            renderTable(mocktestsRes[0]);
+        }
     );
-  }
-
+}
   function loadTopicsForTest(test_id, callback) {
     if (!test_id) {
       allTopics = [];
