@@ -437,23 +437,27 @@ function loadAll() {
     loadTopicsForTest(test_id);
   });
 
-  function editMocktest(id) {
-    $.get(`/mocktests/${id}`, function (m) {
-      $("#modalTitle").text("Edit Mock Test");
-      $("#mocktestId").val(m.id);
-      $("#mocktestName").val(m.name);
-      $("#testDate").val(m.test_date ?? "");
-      $("#linkedTest").val(m.test_id);
-      $("#topicRows").empty();
-      loadTopicsForTest(m.test_id, function () {
-        (m.topics || []).forEach((t) =>
-          addTopicRow(t.topic_id, t.marks_obtained, t.max_marks),
-        );
-      });
-      mocktestModal.show();
-    });
-  }
+function editMocktest(id) {
+    const url = "{{ url_for('mocktests.get_mocktest', id=0) }}"
+        .replace("/0", `/${id}`);
 
+    $.get(url, function (m) {
+        $("#modalTitle").text("Edit Mock Test");
+        $("#mocktestId").val(m.id);
+        $("#mocktestName").val(m.name);
+        $("#testDate").val(m.test_date ?? "");
+        $("#linkedTest").val(m.test_id);
+        $("#topicRows").empty();
+
+        loadTopicsForTest(m.test_id, function () {
+            (m.topics || []).forEach((t) =>
+                addTopicRow(t.topic_id, t.marks_obtained, t.max_marks)
+            );
+        });
+
+        mocktestModal.show();
+    });
+}
   function saveMocktest() {
     const id = $("#mocktestId").val();
     const topics = [];
