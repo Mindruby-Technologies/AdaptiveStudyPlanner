@@ -351,18 +351,22 @@ function loadAll() {
         }
     );
 }
-  function loadTopicsForTest(test_id, callback) {
+  
+function loadTopicsForTest(test_id, callback) {
     if (!test_id) {
-      allTopics = [];
-      if (callback) callback();
-      return;
+        allTopics = [];
+        if (callback) callback();
+        return;
     }
-    $.get(`/topics/by-test/${test_id}`, function (data) {
-      allTopics = data;
-      if (callback) callback();
-    });
-  }
 
+    const url = "{{ url_for('topics.get_topics_by_test', test_id=0) }}"
+        .replace("/0", `/${test_id}`);
+
+    $.get(url, function (data) {
+        allTopics = data;
+        if (callback) callback();
+    });
+}
   function renderTable(data) {
     if (!data.length) {
       $("#mocktestsBody").html(
