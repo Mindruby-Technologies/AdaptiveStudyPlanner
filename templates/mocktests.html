@@ -526,23 +526,27 @@ function loadTopicsForTest(test_id, callback) {
     deleteModal.show();
   }
 
-  function confirmDelete() {
-    $.ajax({
-      url: `/mocktests/${deleteId}`,
-      method: "DELETE",
-      success: function () {
-        deleteModal.hide();
-        showToast("Mock test deleted.", "danger");
-        $("#linkedTest option:not(:first)").remove();
-        loadAll();
-        loadInsights();
-      },
-      error: function () {
-        showToast("Delete failed.", "danger");
-      },
-    });
-  }
+function confirmDelete() {
+    const url = "{{ url_for('mocktests.delete_mocktest', mocktest_id=0) }}"
+        .replace("/0", `/${deleteId}`);
 
+    $.ajax({
+        url: url,
+        method: "DELETE",
+        success: function () {
+            deleteModal.hide();
+            showToast("Mock test deleted.", "danger");
+            $("#linkedTest option:not(:first)").remove();
+            loadAll();
+            loadInsights();
+        },
+        error: function (xhr, status, error) {
+            console.error("Delete failed:", xhr.status, error);
+            console.error("Response:", xhr.responseText);
+            showToast("Delete failed.", "danger");
+        },
+    });
+}
   $("#searchInput").on("input", function () {
     const q = $(this).val().toLowerCase();
     $("#mocktestsBody tr").each(function () {
