@@ -437,8 +437,8 @@ function loadAll() {
     loadTopicsForTest(test_id);
   });
 
-function editMocktest(id) {
-    const url = "{{ url_for('mocktests.get_mocktest', id=0) }}"
+  function editMocktest(id) {
+    const url = "{{ url_for('mocktests.get_mocktest', mocktest_id=0) }}"
         .replace("/0", `/${id}`);
 
     $.get(url, function (m) {
@@ -458,6 +458,7 @@ function editMocktest(id) {
         mocktestModal.show();
     });
 }
+
   function saveMocktest() {
     const id = $("#mocktestId").val();
     const topics = [];
