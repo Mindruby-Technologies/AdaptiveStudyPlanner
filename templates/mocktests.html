@@ -732,7 +732,7 @@ function confirmDelete() {
     }
     loadAiHistory(test_id);
   });
-
+/*
   function loadAiHistory(test_id) {
     $("#aiHistoryBody").html(
       `<tr><td colspan="9" class="text-center py-4 text-muted">Loading...</td></tr>`,
@@ -777,7 +777,61 @@ function confirmDelete() {
       );
     });
   }
+*/
 
+function loadAiHistory(test_id) {
+    $("#aiHistoryBody").html(
+        `<tr><td colspan="9" class="text-center py-4 text-muted">Loading...</td></tr>`
+    );
+
+    const url = "{{ url_for('ai_mocktest.get_ai_reports', test_id=0) }}"
+        .replace("test_id=0", `test_id=${test_id}`);
+
+    $.get(url, function (rows) {
+        aiReportsData = {};
+        rows.forEach((r) => (aiReportsData[r.id] = r));
+
+        if (!rows.length) {
+            $("#aiHistoryBody").html(
+                `<tr><td colspan="9" class="text-center py-4 text-muted">No AI reports yet for this test</td></tr>`
+            );
+            return;
+        }
+
+        const html = rows
+            .map((r) => {
+                const statusBadge =
+                    r.status === "processed"
+                        ? `<span class="badge" style="background:#22c55e;color:#fff">Processed</span>`
+                        : `<span class="badge" style="background:#f59e0b;color:#fff">Pending</span>`;
+
+                return `
+                    <tr>
+                        <td class="ps-4 text-muted">#${r.id}</td>
+                        <td class="fw-semibold">${r.student_name ?? "—"}</td>
+                        <td><span class="badge bg-light text-dark border">${r.linked_test_name ?? "—"}</span></td>
+                        <td>${formatDate(r.test_date)}</td>
+                        <td>${r.total_score ?? "—"}</td>
+                        <td>${r.percentile ?? "—"}</td>
+                        <td>${statusBadge}</td>
+                        <td class="text-muted">${formatDate(r.uploaded_at)}</td>
+                        <td>
+                            <button class="btn btn-outline-primary action-btn" onclick="viewAiReport(${r.id})">
+                                <i class="bi bi-eye"></i> View
+                            </button>
+                        </td>
+                    </tr>`;
+            })
+            .join("");
+
+        $("#aiHistoryBody").html(html);
+    }).fail(function () {
+        $("#aiHistoryBody").html(
+            `<tr><td colspan="9" class="text-center py-4 text-danger">Failed to load history</td></tr>`
+        );
+    });
+}
+  
   function viewAiReport(id) {
     const r = aiReportsData[id];
     if (!r) return;
