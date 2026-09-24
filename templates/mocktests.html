@@ -496,7 +496,7 @@ function loadTopicsForTest(test_id, callback) {
       return;
     }
 
-    const url = id ? `/mocktests/${id}` : "/mocktests";
+    //const url = id ? `/mocktests/${id}` : "/mocktests";
     const url = id
     ? "{{ url_for('mocktests.update_mocktest', mocktest_id=0) }}".replace("/0", `/${id}`)
     : "{{ url_for('mocktests.create_mocktest') }}";
