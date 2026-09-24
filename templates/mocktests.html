@@ -808,7 +808,7 @@ function confirmDelete() {
     $("#aiResultPanel").addClass("d-none");
 
     $.ajax({
-      url: "/mocktests/ai-analyze",
+      url: "{{ url_for('ai_mocktest.ai_analyze') }}",
       method: "POST",
       data: formData,
       processData: false,
